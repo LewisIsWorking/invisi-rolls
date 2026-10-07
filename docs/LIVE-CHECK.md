@@ -18,3 +18,19 @@ real game (it creates users and enables the module).
 7. `npm run check:live` (or set `FOUNDRY_URL` for another port).
 
 The first join is slow on a machine with no GPU; the script disables the canvas to keep it usable.
+
+## PF2e card buttons
+
+`npm run check:live:pf2e` needs the same kind of instance on the **pf2e** system (a junction to an
+installed pf2e folder is enough; never run it while another Foundry has those packs open). It
+stages a scene with one NPC token, then:
+
+1. Clicks Apply Damage on an ordinary public damage card first, as a CONTROL. If that fails, the
+   setup is at fault and the rest means nothing.
+2. Clicks Apply Damage on an Invisi damage card and checks the token lost exactly that much.
+3. Writes a flag to the card, reloads the GM, and checks the card came back with the flag and its
+   button still works.
+4. Checks the player received nothing.
+
+Two traps found while writing it: NPC tokens are unlinked, so damage lands on the TOKEN's actor and
+the world actor's HP never moves; and Foundry v14 needs Chromium 146 or newer (Playwright 1.62+).

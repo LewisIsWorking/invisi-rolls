@@ -1,13 +1,15 @@
 /**
- * Invisi-Rolls: a message mode whose rolls never become ChatMessage documents.
+ * Invisi-Rolls: a message mode whose rolls never become server documents.
  *
  * Core's blind, GM and self rolls are still documents, and Foundry's server sends every document to
  * every connected client, so a player's browser holds the full result even when the chat log hides
  * it (measured: docs/WHY.md). This module cancels the document before it is created and carries
  * the message to the GMs over a socket with an explicit recipient list, which the server delivers
- * to those users only.
+ * to those users only. Each GM's browser then holds it as a GM-local ChatMessage, so the card's
+ * buttons keep working (src/local-message.ts).
  */
-import { appendHistory, clearHistory, historyKey, readHistory } from './history.ts';
+import { clearHistory, historyKey, readHistory } from './history.ts';
+import { addLocal, dropAllLocal, isLocal, restoreLocal, storage } from './local-message.ts';
 import {
   MODE,
   MODULE_ID,
@@ -25,15 +27,7 @@ declare const game: any;
 declare const ui: any;
 declare const CONFIG: any;
 declare const Hooks: any;
-declare const ChatMessage: any;
-
-const storage = (): Storage | undefined => {
-  try {
-    return window.localStorage;
-  } catch {
-    return undefined;
-  }
-};
+declare const foundry: any;
 
 const t = (key: string): string => game.i18n.localize(`INVISI.${key}`);
 
@@ -56,16 +50,21 @@ Hooks.once('init', () => {
   };
 });
 
+/** Before the chat log first renders: put this GM's stored Invisi cards back in place. */
+Hooks.once('setup', () => {
+  if (game.user.isGM) restoreLocal();
+});
+
 Hooks.once('ready', () => {
-  game.socket.on(SOCKET, (payload: unknown, senderId: string) => {
+  game.socket.on(SOCKET, (payload: unknown) => {
     if (!game.user.isGM || !isPayload(payload)) return;
-    void receive(payload.message, senderId);
+    void receive(payload.message);
   });
 
   game.modules.get(MODULE_ID).api = {
     history: () => readHistory(storage(), historyKey(game.world.id)),
-    showHistory,
-    clearHistory: () => clearHistory(storage(), historyKey(game.world.id)),
+    clearHistory: clear,
+    isLocal,
   };
 });
 
@@ -75,9 +74,10 @@ Hooks.on('preCreateChatMessage', (message: any, _data: unknown, options: any, us
   if (!isInvisi(options, message._source)) return;
 
   const source = message.toObject();
+  source._id = foundry.utils.randomID();
+  source.timestamp = Date.now();
   source.flags ??= {};
   source.flags[MODULE_ID] = { ...source.flags[MODULE_ID], invisi: true };
-  source.timestamp ??= Date.now();
   dispatch(source);
   return false;
 });
@@ -86,7 +86,7 @@ function dispatch(source: Record<string, any>): void {
   const route = decideRoute(game.user.isGM, gmRecipients(game.users, game.user.id));
   switch (route.kind) {
     case 'gm':
-      void receive(source, game.user.id);
+      void receive(source);
       if (route.forwardTo.length > 0) {
         game.socket.emit(SOCKET, makePayload(source), { recipients: route.forwardTo });
       }
@@ -101,46 +101,28 @@ function dispatch(source: Record<string, any>): void {
   }
 }
 
-/** On a GM's client: show the card and the dice on THIS screen only, and record it. */
-async function receive(source: Record<string, any>, senderId: string): Promise<void> {
-  appendHistory(storage(), historyKey(game.world.id), { at: Date.now(), message: source });
-  const message = await show(source);
+/** On a GM's client: hold the message locally, show it, and roll the dice on THIS screen only. */
+async function receive(source: Record<string, any>): Promise<void> {
+  let message: any;
+  try {
+    message = await addLocal(source);
+  } catch (err) {
+    console.error(`${MODULE_ID} | could not show an Invisi-Roll`, err, source);
+    ui.notifications.error(t('RenderFailed'));
+    return;
+  }
 
   // Dice So Nice: synchronize=false animates on this client and broadcasts nothing.
   const dice3d = game.dice3d;
-  if (dice3d && message) {
-    const roller = game.users.get(senderId) ?? game.user;
+  if (dice3d) {
+    const roller = game.users.get(message.author?.id ?? source['author']) ?? game.user;
     for (const roll of message.rolls ?? []) void dice3d.showForRoll(roll, roller, false);
   }
 }
 
-/** Render an UNSAVED ChatMessage into this client's chat log. Nothing is sent to the server. */
-async function show(source: Record<string, any>): Promise<any> {
-  const data: any = structuredClone(source);
-  // Ensure this GM is a recipient, or ChatMessage#visible hides it from the GM too.
-  const whisper: string[] = Array.isArray(data.whisper) ? data.whisper : [];
-  if (!whisper.includes(game.user.id)) whisper.push(game.user.id);
-  data.whisper = whisper;
-  try {
-    const message = new ChatMessage.implementation(data);
-    await ui.chat.postOne(message, { notify: true });
-    return message;
-  } catch (err) {
-    console.error(`${MODULE_ID} | could not render an Invisi-Roll`, err, source);
-    ui.notifications.error(t('RenderFailed'));
-    return undefined;
-  }
-}
-
-/** Replay this browser's recorded Invisi-Rolls into the chat log (GM only, local only). */
-async function showHistory(): Promise<void> {
-  if (!game.user.isGM) return;
-  const entries = readHistory(storage(), historyKey(game.world.id));
-  if (entries.length === 0) {
-    ui.notifications.info(t('HistoryEmpty'));
-    return;
-  }
-  for (const entry of entries) await show(entry.message);
+function clear(): void {
+  clearHistory(storage(), historyKey(game.world.id));
+  dropAllLocal();
 }
 
 /** Mark Invisi cards so the GM can tell at a glance that players cannot see them. */
@@ -153,19 +135,22 @@ Hooks.on('renderChatMessageHTML', (message: any, html: HTMLElement) => {
   html.querySelector('.message-header')?.after(badge);
 });
 
-/** `/invisi` replays the GM's history; `/invisi clear` empties it. Never reaches the server. */
+/** Clear Chat Log clears Invisi cards too: that is what the GM asked for. */
+Hooks.on('deleteChatMessage', (message: any, options: any) => {
+  if (options?.deleteAll && !isLocal(message) && game.user.isGM) clear();
+});
+
+/** `/invisi clear` removes this browser's Invisi cards. Never reaches the server. */
 Hooks.on('chatMessage', (_log: unknown, text: string) => {
   const match = /^\/invisi(?:\s+(\w+))?\s*$/i.exec(text.trim());
   if (!match) return;
   if (!game.user.isGM) {
     ui.notifications.warn(t('GMOnly'));
-    return false;
-  }
-  if (match[1]?.toLowerCase() === 'clear') {
-    clearHistory(storage(), historyKey(game.world.id));
+  } else if (match[1]?.toLowerCase() === 'clear') {
+    clear();
     ui.notifications.info(t('HistoryCleared'));
   } else {
-    void showHistory();
+    ui.notifications.info(t('Help'));
   }
   return false;
 });

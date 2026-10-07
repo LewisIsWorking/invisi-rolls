@@ -27,6 +27,7 @@ async function join(browser: Browser, name: string): Promise<Client> {
       /* ignore */
     }
   });
+  ctx.setDefaultTimeout(600_000);
   const page = await ctx.newPage();
   const frames: string[] = [];
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
@@ -44,9 +45,9 @@ const SECRET = /MARK_(GM|PLAYER|SELECTOR)_INVISI/;
 const leaks = (text: string) => SECRET.test(text);
 
 const results: [string, boolean][] = [];
-const check = (name: string, ok: boolean) => {
+const check = (name: string, ok: boolean, detail = '') => {
   results.push([name, ok]);
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
 };
 
 const browser = await chromium.launch();
@@ -100,7 +101,16 @@ try {
   check('GM sees their own Invisi-Roll', log.includes('MARK_GM_INVISI'));
   check("GM sees the player's Invisi-Roll", log.includes('MARK_PLAYER_INVISI'));
   check('GM sees a selector-mode Invisi-Roll', log.includes('MARK_SELECTOR_INVISI'));
-  check('no ChatMessage document was created', !leaks(await docs(gm)));
+  // The GM holds each Invisi message as a GM-LOCAL document (so card buttons work). None may be a
+  // server document: those are the ones every client receives.
+  const gmHeld = await gm.page.evaluate((source) => {
+    const g = globalThis as any;
+    const re = new RegExp(source);
+    const api = g.game.modules.get('invisi-rolls').api;
+    const matching = g.game.messages.contents.filter((m: any) => re.test(JSON.stringify(m.toObject())));
+    return { count: matching.length, allLocal: matching.every((m: any) => api.isLocal(m)) };
+  }, SECRET.source);
+  check('GM holds all three, every one GM-local, none on the server', gmHeld.count === 3 && gmHeld.allLocal, JSON.stringify(gmHeld));
 
   for (const [label, c] of [['Player', player], ['Other', other]] as const) {
     check(`${label} received no Invisi frame`, !c.frames.some(leaks));

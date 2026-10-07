@@ -29,8 +29,13 @@ in that mode **never becomes a chat document at all**:
 2. It carries the message to the connected GMs over a socket with an explicit recipient list.
    Foundry's server delivers those to the named users only, so no player's browser receives a byte
    of it.
-3. Each GM's browser shows the card and, with Dice So Nice, animates the dice on that GM's screen
-   only.
+3. Each GM's browser holds it as a **GM-local chat message**: a real ChatMessage that exists in
+   that GM's browser only. The card renders in the normal chat log, and with Dice So Nice the dice
+   roll on that GM's screen only.
+
+Because the GM-local message is a real ChatMessage, **system card buttons work**: PF2e's Apply
+Damage, for example, finds the card's message and applies its damage to your selected token as
+usual. If a button writes back to its card, the change stays in your browser too.
 
 | | Core Blind roll | Invisi-Roll |
 |---|---|---|
@@ -54,21 +59,22 @@ the GM.
 
 ## GM history
 
-Because nothing is stored in the world, each GM's browser keeps its own record of Invisi-Rolls
-(the last 200 per world).
+Nothing is stored in the world, because every player's browser downloads the world. Instead each
+GM's browser keeps its own Invisi cards (the last 200 per world), and puts them back **in place in
+the chat log** when you reload, buttons and all.
 
-- `/invisi` in chat shows them again in your chat log (only on your screen).
-- `/invisi clear` empties the record.
+- Clear Chat Log clears them too.
+- `/invisi clear` removes them from this browser only.
 
-History does not follow you to another browser or device. That is the price of keeping it out of
-the world database, which every player's browser downloads.
+They do not follow you to another browser or device. With two GMs, each GM's browser keeps its own
+copy, and a button one GM presses changes only that GM's copy.
 
 ## Limits
 
-- Invisi cards are rebuilt locally, so buttons on a system's chat card (apply damage, and so on)
-  may not work on them: the card has no document behind it to act on.
-- Some systems create chat messages in their own way. If a system builds the message without going
+- Some systems create chat messages their own way. If a system builds a message without going
   through Foundry's message modes, it cannot be intercepted. Reports welcome.
+- What a card button does to the WORLD is normal and visible: applying damage changes the target's
+  hit points, which players with permission can see, exactly as with a blind roll.
 
 ## Install
 
