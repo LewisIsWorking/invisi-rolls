@@ -1,13 +1,18 @@
 {
   "name": "invisi-rolls",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rolls that are truly invisible to players, for Foundry VTT v14",
   "type": "module",
   "private": true,
   "license": "MIT",
   "author": "Lewis",
-  "repository": { "type": "git", "url": "git+https://github.com/LewisIsWorking/invisi-rolls.git" },
-  "engines": { "node": ">=22" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LewisIsWorking/invisi-rolls.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit",
