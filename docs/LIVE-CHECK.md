@@ -17,6 +17,9 @@ real game (it creates users and enables the module).
    `node <Foundry>/resources/app/main.js --dataPath=<dir> --port=30077 --adminPassword=<anything> --noupdate`
 7. `npm run check:live` (or set `FOUNDRY_URL` for another port).
 
+Against a server on the internet, set `FOUNDRY_PASSWORD` to the test users' password. On a copy of a
+real world that already has a "Gamemaster" user, set `FOUNDRY_GM` to the test GM's name.
+
 The first join is slow on a machine with no GPU; the script disables the canvas to keep it usable.
 
 ## PF2e card buttons

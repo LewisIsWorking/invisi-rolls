@@ -11,6 +11,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
+// A real world usually has its own "Gamemaster" already; name the test GM account instead.
+const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
 const SLOW = { timeout: 300_000, polling: 1000 };
 
 interface Client {
@@ -56,7 +58,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 
 const browser = await chromium.launch();
 try {
-  const gm = await join(browser, 'Gamemaster');
+  const gm = await join(browser, GM);
   const needsReload = await gm.page.evaluate(async () => {
     const g = (globalThis as any).game;
     for (const name of ['Player', 'Other']) {

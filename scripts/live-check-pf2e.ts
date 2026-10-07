@@ -11,6 +11,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
+// A real world usually has its own "Gamemaster" already; name the test GM account instead.
+const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
 const SLOW = { timeout: 600_000, polling: 1000 };
 const SECRET = /MARK_PF2E_INVISI/;
 
@@ -126,7 +128,7 @@ async function clickApply(page: Page, cardSelector = '#chat li.chat-message.invi
 
 const browser = await chromium.launch();
 try {
-  const gm = await join(browser, 'Gamemaster', true);
+  const gm = await join(browser, GM, true);
   const needsReload = await gm.page.evaluate(async () => {
     const g = (globalThis as any).game;
     if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1, password: (globalThis as any).__pw });

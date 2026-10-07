@@ -10,6 +10,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
+// A real world usually has its own "Gamemaster" already; name the test GM account instead.
+const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
 const SLOW = { timeout: 900_000, polling: 1000 };
 
 async function join(browser: Browser, name: string): Promise<Page> {
@@ -44,7 +46,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 
 const browser = await chromium.launch();
 try {
-  let gm = await join(browser, 'Gamemaster');
+  let gm = await join(browser, GM);
   const needsReload = await gm.evaluate(async () => {
     const g = (globalThis as any).game;
     if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1, password: (globalThis as any).__pw });
@@ -55,7 +57,7 @@ try {
   });
   if (needsReload) {
     await gm.context().close();
-    gm = await join(browser, 'Gamemaster');
+    gm = await join(browser, GM);
   }
   check('Dice So Nice and Invisi-Rolls are active', await gm.evaluate(() => {
     const g = (globalThis as any).game;
