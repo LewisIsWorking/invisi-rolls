@@ -1,0 +1,33 @@
+{
+  "name": "invisi-rolls",
+  "version": "0.1.0",
+  "description": "Rolls that are truly invisible to players, for Foundry VTT v14",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "Lewis",
+  "repository": { "type": "git", "url": "git+https://github.com/LewisIsWorking/invisi-rolls.git" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint:prose": "node scripts/check-em-dashes.ts",
+    "check:live": "node scripts/live-check.ts",
+    "verify": "npm run lint:prose && npm run typecheck && npm run test:coverage && npm run build",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:tag": "changeset tag"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "0.7.0",
+    "@changesets/cli": "2.31.1",
+    "@types/node": "22.20.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "playwright": "1.56.1",
+    "typescript": "6.0.3",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version or release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # Pending changesets: opens a "Version Packages" pull request. That PR merged: tags the release.
+      - name: Create version pull request or tag the release
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run changeset:version
+          publish: npm run changeset:tag
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Packaged in the SAME job: a tag pushed with GITHUB_TOKEN triggers no other workflow.
+      - name: Package and attach module.zip and module.json
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          export VERSION
+          npm run build
+          node scripts/stamp-manifest.ts
+          zip -r module.zip module.json dist lang LICENSE README.md
+          gh release upload "v${VERSION}" module.zip module.json --clobber

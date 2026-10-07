@@ -1,0 +1,21 @@
+{
+  "id": "invisi-rolls",
+  "title": "Invisi-Rolls",
+  "description": "The free, open-source module for rolls that are truly invisible to players. Adds an Invisi-Roll mode whose rolls never become chat documents, so no player's browser ever receives them: no placeholder card, no Dice So Nice animation, nothing in the console.",
+  "version": "0.1.0",
+  "authors": [{ "name": "Lewis" }],
+  "compatibility": { "minimum": "14", "verified": "14.367", "maximum": "14" },
+  "esmodules": ["dist/invisi-rolls.js"],
+  "styles": ["dist/invisi-rolls.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "socket": true,
+  "relationships": {
+    "recommends": [{ "id": "dice-so-nice", "type": "module", "reason": "3D dice for the GM, never for players" }]
+  },
+  "url": "https://github.com/LewisIsWorking/invisi-rolls",
+  "manifest": "https://github.com/LewisIsWorking/invisi-rolls/releases/latest/download/module.json",
+  "download": "https://github.com/LewisIsWorking/invisi-rolls/releases/latest/download/module.zip",
+  "readme": "https://github.com/LewisIsWorking/invisi-rolls/blob/main/README.md",
+  "bugs": "https://github.com/LewisIsWorking/invisi-rolls/issues",
+  "license": "https://github.com/LewisIsWorking/invisi-rolls/blob/main/LICENSE"
+}

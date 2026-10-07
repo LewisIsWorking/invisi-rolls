@@ -1,0 +1,11 @@
+/* A ghostly edge so a GM never mistakes a private card for one the table can see. */
+.chat-message.invisi-roll {
+  border: 1px dashed #7a5fc0;
+  background-image: linear-gradient(135deg, rgb(122 95 192 / 12%), transparent 60%);
+}
+
+.invisi-roll-badge {
+  margin: 2px 0 4px;
+  font-size: var(--font-size-11, 11px);
+  color: #7a5fc0;
+}
