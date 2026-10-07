@@ -103,21 +103,14 @@ function dispatch(source: Record<string, any>): void {
 
 /** On a GM's client: hold the message locally, show it, and roll the dice on THIS screen only. */
 async function receive(source: Record<string, any>): Promise<void> {
-  let message: any;
   try {
-    message = await addLocal(source);
+    await addLocal(source);
   } catch (err) {
     console.error(`${MODULE_ID} | could not show an Invisi-Roll`, err, source);
     ui.notifications.error(t('RenderFailed'));
-    return;
   }
-
-  // Dice So Nice: synchronize=false animates on this client and broadcasts nothing.
-  const dice3d = game.dice3d;
-  if (dice3d) {
-    const roller = game.users.get(message.author?.id ?? source['author']) ?? game.user;
-    for (const roll of message.rolls ?? []) void dice3d.showForRoll(roll, roller, false);
-  }
+  // No Dice So Nice call here: addLocal fires createChatMessage on this client only, and Dice So
+  // Nice animates from that hook. Calling showForRoll as well rolled every die twice.
 }
 
 function clear(): void {

@@ -98,6 +98,17 @@ const hp = (page: Page, actorId: string) =>
     return token.actor.system.attributes.hp.value as number;
   }, actorId);
 
+/** HP once it reaches `expected`, or whatever it is after 90 s. A fixed wait failed on a busy VM. */
+async function hpBecomes(page: Page, actorId: string, expected: number): Promise<number> {
+  const deadline = Date.now() + 90_000;
+  let value = await hp(page, actorId);
+  while (value !== expected && Date.now() < deadline) {
+    await page.waitForTimeout(1000);
+    value = await hp(page, actorId);
+  }
+  return value;
+}
+
 /** Click the Apply Damage button on the newest Invisi card. */
 async function clickApply(page: Page, cardSelector = '#chat li.chat-message.invisi-roll'): Promise<boolean> {
   const card = page.locator(cardSelector).last();
@@ -135,6 +146,12 @@ try {
 
   // CONTROL: the same click on an ordinary public damage card. If this fails too, the fault is the
   // test setup (selection, canvas), not the module, and the Invisi results below mean nothing.
+  // Full HP first: damage stays on the token between runs, and at 0 HP a working button looks broken.
+  await gm.page.evaluate(async (id) => {
+    const g = globalThis as any;
+    const token = g.game.scenes.active.tokens.find((t: any) => t.actorId === id);
+    await token.actor.update({ 'system.attributes.hp.value': token.actor.system.attributes.hp.max });
+  }, actorId);
   const before = await hp(gm.page, actorId);
   await gm.page.evaluate(async () => {
     const g = globalThis as any;
@@ -144,8 +161,7 @@ try {
   await gm.page.waitForTimeout(5000);
   console.log('controlled tokens:', await gm.page.evaluate(() => (globalThis as any).game.user.getActiveTokens().map((t: any) => t.name)));
   check('control: Apply Damage button on a public card', await clickApply(gm.page, '#chat li.chat-message:not(.invisi-roll)'));
-  await gm.page.waitForTimeout(5000);
-  const controlHp = await hp(gm.page, actorId);
+  const controlHp = await hpBecomes(gm.page, actorId, before - 3);
   check('control: public Apply Damage took 3 HP', controlHp === before - 3, `${before} -> ${controlHp}`);
 
   const start = await hp(gm.page, actorId);
@@ -164,8 +180,7 @@ try {
   check('the Invisi card is a GM-local PF2e message with its roll', !!local?.local && local.rolls === 1, JSON.stringify(local));
 
   check('Apply Damage button exists on the Invisi card', await clickApply(gm.page));
-  await gm.page.waitForTimeout(5000);
-  const afterFirst = await hp(gm.page, actorId);
+  const afterFirst = await hpBecomes(gm.page, actorId, start - 7);
   check('Apply Damage took 7 HP off the token', afterFirst === start - 7, `${start} -> ${afterFirst}`);
 
   // A card button writing back to its message: must stay local and survive a reload.
@@ -185,8 +200,7 @@ try {
     return m?.getFlag('invisi-rolls', 'probe') === 'kept';
   }));
   check('Apply Damage still works after the reload', await clickApply(gm.page));
-  await gm.page.waitForTimeout(5000);
-  const afterSecond = await hp(gm.page, actorId);
+  const afterSecond = await hpBecomes(gm.page, actorId, afterFirst - 7);
   check('second Apply Damage took another 7 HP', afterSecond === afterFirst - 7, `${afterFirst} -> ${afterSecond}`);
 
   check('player received no frame with the Invisi card', !player.frames.some((f) => SECRET.test(f)));

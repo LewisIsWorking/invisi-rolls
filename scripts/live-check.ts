@@ -95,6 +95,14 @@ try {
   await gm.page.evaluate(() => (globalThis as any).game.settings.set('core', 'messageMode', 'invisi'));
   await roll(gm, '1d1+8300', 'MARK_SELECTOR_INVISI');
   await gm.page.evaluate(() => (globalThis as any).game.settings.set('core', 'messageMode', 'public'));
+  // Wait for all three rather than a fixed time: on a busy machine the player's socket hop is slow.
+  await gm.page
+    .waitForFunction(
+      () => ['MARK_GM_INVISI', 'MARK_PLAYER_INVISI', 'MARK_SELECTOR_INVISI'].every((m) => document.querySelector('#chat')?.textContent?.includes(m)),
+      null,
+      { timeout: 120_000, polling: 1000 },
+    )
+    .catch(() => undefined);
   await settle();
 
   const log = await gmLog();

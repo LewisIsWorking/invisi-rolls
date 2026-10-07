@@ -34,3 +34,11 @@ stages a scene with one NPC token, then:
 
 Two traps found while writing it: NPC tokens are unlinked, so damage lands on the TOKEN's actor and
 the world actor's HP never moves; and Foundry v14 needs Chromium 146 or newer (Playwright 1.62+).
+
+## Dice So Nice
+
+`npm run check:live:dsn` needs Dice So Nice installed in the same instance. It checks that the GM
+sees each Invisi-Roll's dice exactly once and that a player sees none, with a public roll as the
+control. Dice So Nice disables itself in No-Canvas mode, so this check keeps the canvas on and stops
+only the scene's render loop. It found a real bug: the module called `showForRoll` on top of Dice So
+Nice's own `createChatMessage` handler, so the GM saw every die twice.
