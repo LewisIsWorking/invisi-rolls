@@ -10,6 +10,7 @@
 import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
+const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 const SLOW = { timeout: 300_000, polling: 1000 };
 
 interface Client {
@@ -33,8 +34,11 @@ async function join(browser: Browser, name: string): Promise<Client> {
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
   await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 300_000 });
   await page.fill('input[name=username]', name);
+  // A server reachable from the internet needs passwords; the throwaway one does not.
+  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
   await page.waitForFunction(() => (globalThis as any).game?.ready === true, null, SLOW);
+  await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
   return { page, frames };
 }
 
@@ -56,7 +60,7 @@ try {
   const needsReload = await gm.page.evaluate(async () => {
     const g = (globalThis as any).game;
     for (const name of ['Player', 'Other']) {
-      if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role: 1 });
+      if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role: 1, password: (globalThis as any).__pw });
     }
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls']) return false;

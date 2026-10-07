@@ -9,6 +9,7 @@
 import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
+const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 const SLOW = { timeout: 900_000, polling: 1000 };
 
 async function join(browser: Browser, name: string): Promise<Page> {
@@ -19,8 +20,11 @@ async function join(browser: Browser, name: string): Promise<Page> {
   const page = await ctx.newPage();
   await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 900_000 });
   await page.fill('input[name=username]', name);
+  // A server reachable from the internet needs passwords; the throwaway one does not.
+  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
   await page.waitForFunction(() => (globalThis as any).game?.ready === true, null, SLOW);
+  await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
   // Count every animation Dice So Nice starts, by its dice total (each roll below is dice-only, so the
   // totals 3, 5 and 7 name the roll).
   await page.evaluate(() => {
@@ -43,7 +47,7 @@ try {
   let gm = await join(browser, 'Gamemaster');
   const needsReload = await gm.evaluate(async () => {
     const g = (globalThis as any).game;
-    if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1 });
+    if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1, password: (globalThis as any).__pw });
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls'] && config['dice-so-nice']) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true, 'dice-so-nice': true });

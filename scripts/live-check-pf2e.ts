@@ -10,6 +10,7 @@
 import { chromium, type Browser, type Page } from 'playwright';
 
 const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
+const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 const SLOW = { timeout: 600_000, polling: 1000 };
 const SECRET = /MARK_PF2E_INVISI/;
 
@@ -39,6 +40,8 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
   await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
   await page.fill('input[name=username]', name);
+  // A server reachable from the internet needs passwords; the throwaway one does not.
+  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
   await ready(page);
   return { page, frames };
@@ -46,6 +49,7 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
 
 async function ready(page: Page): Promise<void> {
   await page.waitForFunction(() => (globalThis as any).game?.ready === true, null, SLOW);
+  await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
 }
 
 const results: [string, boolean][] = [];
@@ -125,7 +129,7 @@ try {
   const gm = await join(browser, 'Gamemaster', true);
   const needsReload = await gm.page.evaluate(async () => {
     const g = (globalThis as any).game;
-    if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1 });
+    if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1, password: (globalThis as any).__pw });
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls']) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true });
@@ -135,9 +139,10 @@ try {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm.page);
   }
-  check('system is pf2e and module is active', await gm.page.evaluate(() => {
+  // Starfinder 2e shares PF2e's damage cards and Apply Damage button, so the same check covers it.
+  check('system is pf2e or sf2e and module is active', await gm.page.evaluate(() => {
     const g = (globalThis as any).game;
-    return g.system.id === 'pf2e' && g.modules.get('invisi-rolls')?.active === true;
+    return ['pf2e', 'sf2e'].includes(g.system.id) && g.modules.get('invisi-rolls')?.active === true;
   }));
 
   const actorId = await stage(gm.page);
