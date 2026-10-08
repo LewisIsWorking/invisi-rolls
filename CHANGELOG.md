@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.1.3
+
+### Patch Changes
+
+- [#4](https://github.com/LewisIsWorking/invisi-rolls/pull/4) [`6f1e2fd`](https://github.com/LewisIsWorking/invisi-rolls/commit/6f1e2fdfeb32a2b8b4119b24897ed31e0a19a1bf) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Keep what other modules add to a message in their own preCreate hooks, such as PF2e Toolbelt's target rows on damage cards. Invisi-Rolls now takes the message only after every module has finished it.
+
 ## 0.1.2
 
 ### Patch Changes
