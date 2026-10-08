@@ -19,6 +19,7 @@ import {
   isInvisi,
   isPayload,
   makePayload,
+  takeMarked,
   toWire,
 } from './routing.ts';
 import './styles.css';
@@ -69,19 +70,51 @@ Hooks.once('ready', () => {
   };
 });
 
-/** The interception. Returning false stops Foundry creating the document at all. */
+/**
+ * Messages this client marked as Invisi in preCreateChatMessage, waiting for _preCreateOperation.
+ * Taking them there, not in the hook, matters: other modules finish the message in their own
+ * preCreate hooks (PF2e Toolbelt adds its target rows that way, often from a hook registered when a
+ * button is clicked), and a hook that cancels the message stops every hook after it.
+ */
+const marked = new WeakSet<object>();
+let operationWrapped = false;
+
+/** After every preCreate hook: take the marked messages out of the batch the server would get. */
+Hooks.once('setup', () => {
+  const cls = CONFIG.ChatMessage.documentClass;
+  const original = cls._preCreateOperation;
+  cls._preCreateOperation = async function (documents: any[], operation: any, user: any) {
+    const allowed = await original.call(this, documents, operation, user);
+    if (allowed === false) return false;
+    for (const message of takeMarked(documents, (d) => marked.has(d))) dispatch(sourceOf(message));
+    return allowed;
+  };
+  operationWrapped = true;
+});
+
+/** The interception: mark the message now, take it once every other module has finished it. */
 Hooks.on('preCreateChatMessage', (message: any, _data: unknown, options: any, userId: string) => {
   if (userId !== game.user.id) return;
   if (!isInvisi(options, message._source)) return;
+  message.updateSource({ flags: { [MODULE_ID]: { invisi: true } } });
+  if (operationWrapped) {
+    marked.add(message);
+    return;
+  }
+  // Without the wrapper (it failed to install), cancel here: later hooks miss out, but the message
+  // still never reaches the server.
+  dispatch(sourceOf(message));
+  return false;
+});
 
+function sourceOf(message: any): Record<string, any> {
   const source = toWire(message.toObject());
   source._id = foundry.utils.randomID();
   source.timestamp = Date.now();
   source.flags ??= {};
   source.flags[MODULE_ID] = { ...source.flags[MODULE_ID], invisi: true };
-  dispatch(source);
-  return false;
-});
+  return source;
+}
 
 function dispatch(source: Record<string, any>): void {
   const route = decideRoute(game.user.isGM, gmRecipients(game.users, game.user.id));
