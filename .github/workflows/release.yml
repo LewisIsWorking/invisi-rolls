@@ -58,3 +58,11 @@ jobs:
           gh release view "v${VERSION}" --repo "$REPO" >/dev/null 2>&1 \
             || gh release create "v${VERSION}" --repo "$REPO" --title "v${VERSION}" --generate-notes
           gh release upload "v${VERSION}" module.zip module.json --repo "$REPO" --clobber
+
+      # Lists the new version on foundryvtt.com. Skipped until the FOUNDRY_RELEASE_TOKEN secret exists.
+      - name: Publish the release to foundryvtt.com
+        if: (steps.changesets.outputs.published == 'true' || github.event_name == 'workflow_dispatch') && env.FOUNDRY_RELEASE_TOKEN != ''
+        env:
+          FOUNDRY_RELEASE_TOKEN: ${{ secrets.FOUNDRY_RELEASE_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: node scripts/publish-foundry.ts
