@@ -9,6 +9,7 @@ import {
   isInvisi,
   isPayload,
   makePayload,
+  toWire,
 } from '../src/routing.ts';
 
 describe('isInvisi', () => {
@@ -82,5 +83,27 @@ describe('payload', () => {
 
   it('travels on the module socket channel Foundry relays for socket-enabled modules', () => {
     expect(SOCKET).toBe('module.invisi-rolls');
+  });
+});
+
+describe('toWire', () => {
+  // A PF2e strike's message data holds a predicate function; structuredClone threw DataCloneError on it.
+  const strike = {
+    flavor: 'Strike',
+    flags: { pf2e: { context: { test: (x: number) => x > 1, options: ['a', 'b'] } } },
+    rolls: ['{"formula":"1d20+9"}'],
+  };
+
+  it('turns a message holding a function into data structuredClone accepts', () => {
+    expect(() => structuredClone(strike)).toThrow();
+    expect(() => structuredClone(toWire(strike))).not.toThrow();
+  });
+
+  it('drops only what a socket would drop and keeps the rest', () => {
+    expect(toWire(strike)).toEqual({
+      flavor: 'Strike',
+      flags: { pf2e: { context: { options: ['a', 'b'] } } },
+      rolls: ['{"formula":"1d20+9"}'],
+    });
   });
 });

@@ -19,6 +19,7 @@ import {
   isInvisi,
   isPayload,
   makePayload,
+  toWire,
 } from './routing.ts';
 import './styles.css';
 
@@ -73,7 +74,7 @@ Hooks.on('preCreateChatMessage', (message: any, _data: unknown, options: any, us
   if (userId !== game.user.id) return;
   if (!isInvisi(options, message._source)) return;
 
-  const source = message.toObject();
+  const source = toWire(message.toObject());
   source._id = foundry.utils.randomID();
   source.timestamp = Date.now();
   source.flags ??= {};
