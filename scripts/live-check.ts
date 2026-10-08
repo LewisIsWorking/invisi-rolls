@@ -121,7 +121,7 @@ try {
     await new g.Roll('1d1+8400').toMessage({ flavor: 'MARK_LATE_HOOK' }, { messageMode: 'invisi' });
     for (let i = 0; i < 30; i++) {
       const m = g.game.messages.contents.find((x: any) => x.flavor === 'MARK_LATE_HOOK');
-      if (m) return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), flag: m.getFlag('late-module', 'targets') };
+      if (m) return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), flag: m.flags['late-module']?.targets };
       await new Promise((r) => setTimeout(r, 500));
     }
     return null;
