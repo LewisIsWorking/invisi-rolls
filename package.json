@@ -1,6 +1,6 @@
 {
   "name": "invisi-rolls",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Rolls that are truly invisible to players, for Foundry VTT v14",
   "type": "module",
   "exports": {
