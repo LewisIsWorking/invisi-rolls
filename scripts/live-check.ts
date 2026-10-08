@@ -47,7 +47,7 @@ async function join(browser: Browser, name: string): Promise<Client> {
 const ready = (c: Client) => c.page.waitForFunction(() => (globalThis as any).game?.ready === true, null, SLOW);
 
 /** Matches only the Invisi markers, never module names or descriptions that also say Invisi. */
-const SECRET = /MARK_(GM|PLAYER|SELECTOR)_INVISI/;
+const SECRET = /MARK_(GM|PLAYER|SELECTOR)_INVISI|MARK_LATE_HOOK/;
 const leaks = (text: string) => SECRET.test(text);
 
 const results: [string, boolean][] = [];
@@ -111,6 +111,23 @@ try {
     .catch(() => undefined);
   await settle();
 
+  // 4. Another module finishing the message in a LATER preCreate hook, registered just before the
+  // roll, the way PF2e Toolbelt adds its target rows when Damage is clicked. Its flag must survive.
+  const lateFlag = await gm.page.evaluate(async () => {
+    const g = globalThis as any;
+    g.Hooks.once('preCreateChatMessage', (m: any) => {
+      m.updateSource({ flags: { 'late-module': { targets: ['MARK_TARGET'] } } });
+    });
+    await new g.Roll('1d1+8400').toMessage({ flavor: 'MARK_LATE_HOOK' }, { messageMode: 'invisi' });
+    for (let i = 0; i < 30; i++) {
+      const m = g.game.messages.contents.find((x: any) => x.flavor === 'MARK_LATE_HOOK');
+      if (m) return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), flag: m.getFlag('late-module', 'targets') };
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return null;
+  });
+  check("a later module's preCreate flag is kept on the Invisi card", !!lateFlag?.local && lateFlag.flag?.[0] === 'MARK_TARGET', JSON.stringify(lateFlag));
+
   const log = await gmLog();
   check('GM sees their own Invisi-Roll', log.includes('MARK_GM_INVISI'));
   check("GM sees the player's Invisi-Roll", log.includes('MARK_PLAYER_INVISI'));
@@ -124,7 +141,7 @@ try {
     const matching = g.game.messages.contents.filter((m: any) => re.test(JSON.stringify(m.toObject())));
     return { count: matching.length, allLocal: matching.every((m: any) => api.isLocal(m)) };
   }, SECRET.source);
-  check('GM holds all three, every one GM-local, none on the server', gmHeld.count === 3 && gmHeld.allLocal, JSON.stringify(gmHeld));
+  check('GM holds all four, every one GM-local, none on the server', gmHeld.count === 4 && gmHeld.allLocal, JSON.stringify(gmHeld));
 
   for (const [label, c] of [['Player', player], ['Other', other]] as const) {
     check(`${label} received no Invisi frame`, !c.frames.some(leaks));

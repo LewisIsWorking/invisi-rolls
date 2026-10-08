@@ -81,6 +81,19 @@ export function toWire<T>(source: T): T {
   return JSON.parse(JSON.stringify(source)) as T;
 }
 
+/**
+ * Remove the marked items from `items` IN PLACE and return them, in order. In place because Foundry
+ * sends the very array it passed to _preCreateOperation, so a copy would leave them in the request.
+ */
+export function takeMarked<T>(items: T[], isMarked: (item: T) => boolean): T[] {
+  const taken: T[] = [];
+  for (let i = 0; i < items.length; ) {
+    if (isMarked(items[i] as T)) taken.push(...items.splice(i, 1));
+    else i++;
+  }
+  return taken;
+}
+
 export function makePayload(message: Record<string, unknown>): InvisiPayload {
   return { v: 1, type: 'roll', message };
 }

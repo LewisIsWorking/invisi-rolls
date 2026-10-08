@@ -9,6 +9,7 @@ import {
   isInvisi,
   isPayload,
   makePayload,
+  takeMarked,
   toWire,
 } from '../src/routing.ts';
 
@@ -105,5 +106,26 @@ describe('toWire', () => {
       flags: { pf2e: { context: { options: ['a', 'b'] } } },
       rolls: ['{"formula":"1d20+9"}'],
     });
+  });
+});
+
+describe('takeMarked', () => {
+  it('removes the marked items from the SAME array and returns them in order', () => {
+    const batch = ['a', 'INVISI-1', 'b', 'INVISI-2', 'INVISI-3'];
+    const sent = batch;
+    expect(takeMarked(batch, (x) => x.startsWith('INVISI'))).toEqual(['INVISI-1', 'INVISI-2', 'INVISI-3']);
+    expect(sent).toEqual(['a', 'b']);
+  });
+
+  it('can empty the batch, which tells Foundry to send nothing', () => {
+    const batch = ['INVISI'];
+    takeMarked(batch, () => true);
+    expect(batch).toHaveLength(0);
+  });
+
+  it('leaves an unmarked batch alone', () => {
+    const batch = [1, 2, 3];
+    expect(takeMarked(batch, () => false)).toEqual([]);
+    expect(batch).toEqual([1, 2, 3]);
   });
 });
