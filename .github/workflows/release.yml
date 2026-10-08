@@ -57,7 +57,11 @@ jobs:
           # changesets/action makes no release without a CHANGELOG entry, so make sure one exists.
           gh release view "v${VERSION}" --repo "$REPO" >/dev/null 2>&1 \
             || gh release create "v${VERSION}" --repo "$REPO" --title "v${VERSION}" --generate-notes
-          gh release upload "v${VERSION}" module.zip module.json --repo "$REPO" --clobber
+          # The library package for game systems that embed Invisi-Rolls (src/index.ts). A fixed asset
+          # name, so a system depends on .../releases/download/vX.Y.Z/invisi-rolls.tgz.
+          npm pack
+          mv "invisi-rolls-${VERSION}.tgz" invisi-rolls.tgz
+          gh release upload "v${VERSION}" module.zip module.json invisi-rolls.tgz --repo "$REPO" --clobber
 
       # Lists the new version on foundryvtt.com. Skipped until the FOUNDRY_RELEASE_TOKEN secret exists.
       - name: Publish the release to foundryvtt.com

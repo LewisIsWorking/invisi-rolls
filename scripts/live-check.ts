@@ -6,6 +6,10 @@
  * Needs a running Foundry v14 world at FOUNDRY_URL (default http://localhost:30077) with this module
  * installed and Gamemaster/Player/Other users without passwords (the script creates the players and
  * enables the module if needed). See docs/LIVE-CHECK.md for a throwaway setup.
+ *
+ * INVISI_EMBEDDED=1 checks the LIBRARY instead: the world's system embeds Invisi-Rolls (src/index.ts)
+ * and exposes its api as `game.system.api.invisiRolls`, and the module must be OFF. Same promise, same
+ * checks, on the system's own socket and flag scope.
  */
 import { chromium, type Browser, type Page } from 'playwright';
 
@@ -14,6 +18,7 @@ const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 // A real world usually has its own "Gamemaster" already; name the test GM account instead.
 const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
 const SLOW = { timeout: 300_000, polling: 1000 };
+const EMBEDDED = process.env['INVISI_EMBEDDED'] === '1';
 
 interface Client {
   page: Page;
@@ -30,6 +35,12 @@ async function join(browser: Browser, name: string): Promise<Client> {
       /* ignore */
     }
   });
+  // Where the api lives depends on who runs Invisi-Rolls: the module, or the system embedding it.
+  // An init script, so it survives the reloads below.
+  await ctx.addInitScript((embedded) => {
+    const g = globalThis as any;
+    g.__invisiApi = () => (embedded ? g.game.system.api?.invisiRolls : g.game.modules.get('invisi-rolls')?.api);
+  }, EMBEDDED);
   ctx.setDefaultTimeout(600_000);
   const page = await ctx.newPage();
   const frames: string[] = [];
@@ -59,21 +70,28 @@ const check = (name: string, ok: boolean, detail = '') => {
 const browser = await chromium.launch();
 try {
   const gm = await join(browser, GM);
-  const needsReload = await gm.page.evaluate(async () => {
+  const needsReload = await gm.page.evaluate(async (embedded) => {
     const g = (globalThis as any).game;
     for (const name of ['Player', 'Other']) {
       if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role: 1, password: (globalThis as any).__pw });
     }
     const config = g.settings.get('core', 'moduleConfiguration');
-    if (config['invisi-rolls']) return false;
-    await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true });
+    // Embedded, the module must be OFF: with it on, the system's copy stands aside by design.
+    if (!!config['invisi-rolls'] === !embedded) return false;
+    await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': !embedded });
     return true;
-  });
+  }, EMBEDDED);
   if (needsReload) {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm);
   }
-  check('module is active', await gm.page.evaluate(() => (globalThis as any).game.modules.get('invisi-rolls')?.active === true));
+  if (EMBEDDED) {
+    check('module is off, and the system runs the embedded copy', await gm.page.evaluate(
+      () => (globalThis as any).game.modules.get('invisi-rolls')?.active !== true && !!(globalThis as any).__invisiApi(),
+    ));
+  } else {
+    check('module is active', await gm.page.evaluate(() => (globalThis as any).game.modules.get('invisi-rolls')?.active === true));
+  }
   check('mode is registered', await gm.page.evaluate(() => 'invisi' in (globalThis as any).CONFIG.ChatMessage.modes));
 
   const player = await join(browser, 'Player');
@@ -121,7 +139,7 @@ try {
     await new g.Roll('1d1+8400').toMessage({ flavor: 'MARK_LATE_HOOK' }, { messageMode: 'invisi' });
     for (let i = 0; i < 30; i++) {
       const m = g.game.messages.contents.find((x: any) => x.flavor === 'MARK_LATE_HOOK');
-      if (m) return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), flag: m.flags['late-module']?.targets };
+      if (m) return { local: g.__invisiApi().isLocal(m), flag: m.flags['late-module']?.targets };
       await new Promise((r) => setTimeout(r, 500));
     }
     return null;
@@ -132,12 +150,15 @@ try {
   check('GM sees their own Invisi-Roll', log.includes('MARK_GM_INVISI'));
   check("GM sees the player's Invisi-Roll", log.includes('MARK_PLAYER_INVISI'));
   check('GM sees a selector-mode Invisi-Roll', log.includes('MARK_SELECTOR_INVISI'));
+  // The badge needs the flag read under the right scope AND the strings loaded: embedded, the host's
+  // manifest lists no lang file, so this is what proves they came with the library.
+  check("GM's Invisi cards carry the badge, in words", log.includes('no player can see this'));
   // The GM holds each Invisi message as a GM-LOCAL document (so card buttons work). None may be a
   // server document: those are the ones every client receives.
   const gmHeld = await gm.page.evaluate((source) => {
     const g = globalThis as any;
     const re = new RegExp(source);
-    const api = g.game.modules.get('invisi-rolls').api;
+    const api = g.__invisiApi();
     const matching = g.game.messages.contents.filter((m: any) => re.test(JSON.stringify(m.toObject())));
     return { count: matching.length, allLocal: matching.every((m: any) => api.isLocal(m)) };
   }, SECRET.source);
@@ -154,7 +175,7 @@ try {
   check('Other still has nothing after a reload', !other.frames.some(leaks) && !leaks(await docs(other)));
 
   check('history recorded all three on the GM browser', await gm.page.evaluate(
-    () => (globalThis as any).game.modules.get('invisi-rolls').api.history().length >= 3,
+    () => (globalThis as any).__invisiApi().history().length >= 3,
   ));
 } finally {
   await browser.close();

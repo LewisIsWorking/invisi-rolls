@@ -6,7 +6,11 @@
 /** The key of the message mode this module adds to CONFIG.ChatMessage.modes. */
 export const MODE = 'invisi';
 
-/** The module id, which is also the flag scope and the socket channel suffix. */
+/**
+ * The module id. As a standalone module it is also the flag scope and the socket channel suffix; a
+ * system that embeds Invisi-Rolls passes its own (src/start.ts), because Foundry only accepts a flag
+ * scope or socket channel that belongs to the system or an active module.
+ */
 export const MODULE_ID = 'invisi-rolls';
 
 /** Foundry only relays custom socket traffic on `module.<id>` for a module that declares `socket`. */
@@ -30,9 +34,10 @@ export interface UserLike {
 export function isInvisi(
   options: { messageMode?: unknown; rollMode?: unknown } | undefined,
   source: { flags?: Record<string, unknown> } | undefined,
+  flagScope: string = MODULE_ID,
 ): boolean {
   if (options?.messageMode === MODE || options?.rollMode === MODE) return true;
-  const flags = source?.flags?.[MODULE_ID] as { invisi?: unknown } | undefined;
+  const flags = source?.flags?.[flagScope] as { invisi?: unknown } | undefined;
   return flags?.invisi === true;
 }
 
@@ -102,4 +107,12 @@ export function isPayload(value: unknown): value is InvisiPayload {
   if (typeof value !== 'object' || value === null) return false;
   const p = value as Partial<InvisiPayload>;
   return p.v === 1 && p.type === 'roll' && typeof p.message === 'object' && p.message !== null;
+}
+
+/**
+ * Is the standalone module active in this world? A system that embeds Invisi-Rolls stands aside when
+ * it is, so the two copies never both intercept the same roll and post it twice.
+ */
+export function standaloneActive(modules: { get(id: string): { active?: boolean } | undefined } | undefined): boolean {
+  return modules?.get(MODULE_ID)?.active === true;
 }
