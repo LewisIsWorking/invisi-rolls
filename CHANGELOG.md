@@ -1,5 +1,15 @@
 # invisi-rolls
 
+## 0.2.0
+
+### Minor Changes
+
+- [#9](https://github.com/LewisIsWorking/invisi-rolls/pull/9) [`b8f2ab5`](https://github.com/LewisIsWorking/invisi-rolls/commit/b8f2ab5a71d276b488c51851fd2391aab8789175) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - A game system can now ship Invisi-Rolls built in: each release attaches a library package (invisi-rolls.tgz) with embedInvisiRolls, which runs on the system's own socket and flag scope and stands aside if the standalone module is active.
+
+### Patch Changes
+
+- [#7](https://github.com/LewisIsWorking/invisi-rolls/pull/7) [`ea3264e`](https://github.com/LewisIsWorking/invisi-rolls/commit/ea3264e74481e2fa474d5c2eacfa95901e5057a6) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Verified on Foundry 14.368, and each release now publishes itself to foundryvtt.com.
+
 ## 0.1.3
 
 ### Patch Changes
