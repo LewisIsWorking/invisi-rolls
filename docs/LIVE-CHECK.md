@@ -22,6 +22,27 @@ real world that already has a "Gamemaster" user, set `FOUNDRY_GM` to the test GM
 
 The first join is slow on a machine with no GPU; the script disables the canvas to keep it usable.
 
+## Embedded in a system
+
+`INVISI_EMBEDDED=1 npm run check:live` runs the same checks against the LIBRARY, the way a game
+system ships Invisi-Rolls built in. On the throwaway instance:
+
+1. `npm run build:lib`, then copy `dist/lib/index.js` to `Data/systems/stub/invisi/index.js`.
+2. Add `"esmodules": ["embed.js"]` and `"socket": true` to the stub's `system.json`, and create
+   `Data/systems/stub/embed.js`:
+
+   ```js
+   import { embedInvisiRolls } from './invisi/index.js';
+   Hooks.once('init', () => {
+     const api = embedInvisiRolls({ socket: `system.${game.system.id}`, flagScope: game.system.id });
+     game.system.api = { invisiRolls: api };
+   });
+   ```
+3. Restart Foundry. The script switches the module OFF.
+
+Then run the plain `npm run check:live` against the same instance: it switches the module ON, and
+"GM holds all four" proves the system's copy stood aside (both running would post every roll twice).
+
 ## PF2e card buttons
 
 `npm run check:live:pf2e` needs the same kind of instance on the **pf2e** system (a junction to an

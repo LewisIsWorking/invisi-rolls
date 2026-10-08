@@ -84,11 +84,33 @@ Manifest URL:
 https://github.com/LewisIsWorking/invisi-rolls/releases/latest/download/module.json
 ```
 
+## Built into a game system
+
+A system can ship Invisi-Rolls built in, so its players never install the module. Each release
+attaches `invisi-rolls.tgz`, a library package; depend on it by URL:
+
+```json
+"invisi-rolls": "https://github.com/LewisIsWorking/invisi-rolls/releases/download/v0.2.0/invisi-rolls.tgz"
+```
+
+then start it from the system's `init` hook, and set `"socket": true` in its system.json:
+
+```ts
+import { embedInvisiRolls } from 'invisi-rolls';
+
+Hooks.once('init', () => {
+  embedInvisiRolls({ socket: `system.${game.system.id}`, flagScope: game.system.id });
+});
+```
+
+The strings and styles come with it. If the standalone module is also active in a world, the
+embedded copy does nothing, so a roll is never handled twice.
+
 ## Development
 
 ```sh
 npm install
-npm run verify       # prose guard, typecheck, unit tests at 100% coverage, build
+npm run verify       # prose guard, typecheck, unit tests at 100% coverage, module + library builds
 npm run check:live   # the real proof, against a running Foundry: see docs/LIVE-CHECK.md
 ```
 

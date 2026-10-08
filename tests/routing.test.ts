@@ -9,6 +9,7 @@ import {
   isInvisi,
   isPayload,
   makePayload,
+  standaloneActive,
   takeMarked,
   toWire,
 } from '../src/routing.ts';
@@ -36,6 +37,24 @@ describe('isInvisi', () => {
     expect(isInvisi(undefined, undefined)).toBe(false);
     expect(isInvisi({}, { flags: { [MODULE_ID]: { invisi: 'yes' } } })).toBe(false);
     expect(isInvisi({}, { flags: { other: { invisi: true } } })).toBe(false);
+  });
+
+  it('reads the flag under the scope of the host, when a system embeds it', () => {
+    // Embedded in a system, the flag lives under the system's id: Foundry rejects a scope that is not
+    // the system or an active module, and the standalone module is not installed.
+    expect(isInvisi({}, { flags: { coo: { invisi: true } } }, 'coo')).toBe(true);
+    expect(isInvisi({}, { flags: { [MODULE_ID]: { invisi: true } } }, 'coo')).toBe(false);
+  });
+});
+
+describe('standaloneActive', () => {
+  const modules = (active: boolean) => ({ get: (id: string) => (id === MODULE_ID ? { active } : undefined) });
+
+  it('is true only when the standalone module is installed AND active', () => {
+    expect(standaloneActive(modules(true))).toBe(true);
+    expect(standaloneActive(modules(false))).toBe(false);
+    expect(standaloneActive({ get: () => undefined })).toBe(false);
+    expect(standaloneActive(undefined)).toBe(false);
   });
 });
 

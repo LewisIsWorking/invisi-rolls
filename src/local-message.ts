@@ -40,7 +40,7 @@ export function isLocal(message: any): boolean {
 }
 
 /** Build a local message from source data, without adding it anywhere. */
-function build(source: Record<string, any>): any {
+function build(source: Record<string, any>, flagScope: string): any {
   const data: any = toWire(source);
   data._id ||= foundry.utils.randomID();
   data.timestamp ||= Date.now();
@@ -49,7 +49,7 @@ function build(source: Record<string, any>): any {
   if (!whisper.includes(game.user.id)) whisper.push(game.user.id);
   data.whisper = whisper;
   data.flags ??= {};
-  data.flags[MODULE_ID] = { ...data.flags[MODULE_ID], invisi: true };
+  data.flags[flagScope] = { ...data.flags[flagScope], invisi: true };
 
   const message = new ChatMessage.implementation(data);
   message[LOCAL] = true;
@@ -80,8 +80,8 @@ function patch(message: any): void {
 }
 
 /** A new Invisi message arrives: add it, record it, show it. Returns the document. */
-export async function addLocal(source: Record<string, any>): Promise<any> {
-  const message = build(source);
+export async function addLocal(source: Record<string, any>, flagScope: string): Promise<any> {
+  const message = build(source, flagScope);
   game.messages.set(message.id, message);
   upsertHistory(storage(), key(), message.toObject() as StoredMessage);
   Hooks.callAll('createChatMessage', message, {}, game.user.id);
@@ -94,7 +94,7 @@ export async function addLocal(source: Record<string, any>): Promise<any> {
  * renders: put this browser's stored Invisi messages back, in timestamp order, so the log renders
  * them in place as if they had always been there.
  */
-export function restoreLocal(): void {
+export function restoreLocal(flagScope: string): void {
   const stored = readHistory(storage(), key());
   if (stored.length === 0) return;
 
@@ -102,7 +102,7 @@ export function restoreLocal(): void {
   const local: any[] = [];
   for (const source of stored) {
     try {
-      local.push(build(source));
+      local.push(build(source, flagScope));
     } catch (err) {
       console.warn(`${MODULE_ID} | skipped a stored Invisi message that no longer loads`, err);
     }
