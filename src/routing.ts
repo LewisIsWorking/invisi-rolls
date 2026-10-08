@@ -72,6 +72,15 @@ export interface InvisiPayload {
   message: Record<string, unknown>;
 }
 
+/**
+ * Message source data as the server or a socket would carry it: plain JSON. Systems can leave live
+ * objects in a message's data (PF2e strikes hold a predicate function), which a socket silently drops
+ * but structuredClone refuses, so the GM's own rolls broke while players' rolls worked.
+ */
+export function toWire<T>(source: T): T {
+  return JSON.parse(JSON.stringify(source)) as T;
+}
+
 export function makePayload(message: Record<string, unknown>): InvisiPayload {
   return { v: 1, type: 'roll', message };
 }

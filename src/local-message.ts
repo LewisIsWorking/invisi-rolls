@@ -13,7 +13,7 @@
  * into the GM's browser storage so the card, including what its buttons did to it, survives a reload.
  */
 import { historyKey, mergeByTime, readHistory, removeHistory, upsertHistory, type StoredMessage } from './history.ts';
-import { MODULE_ID } from './routing.ts';
+import { MODULE_ID, toWire } from './routing.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Foundry ships no types; this file is the boundary. */
 declare const game: any;
@@ -41,7 +41,7 @@ export function isLocal(message: any): boolean {
 
 /** Build a local message from source data, without adding it anywhere. */
 function build(source: Record<string, any>): any {
-  const data: any = structuredClone(source);
+  const data: any = toWire(source);
   data._id ||= foundry.utils.randomID();
   data.timestamp ||= Date.now();
   // The GM must be a recipient, or ChatMessage#visible hides the card from the GM as well.
