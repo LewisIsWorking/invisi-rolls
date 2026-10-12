@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.3.0
+
+### Minor Changes
+
+- [#11](https://github.com/LewisIsWorking/invisi-rolls/pull/11) [`5261dfd`](https://github.com/LewisIsWorking/invisi-rolls/commit/5261dfd5895421acdfe077b2962e577eac20622b) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - PF2e and SF2e secret checks (Recall Knowledge, Seek, Sense Motive and the like) are now Invisi-Rolls, so players' browsers never receive them. A world setting turns this off.
+
 ## 0.2.0
 
 ### Minor Changes
