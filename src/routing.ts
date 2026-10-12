@@ -41,6 +41,19 @@ export function isInvisi(
   return flags?.invisi === true;
 }
 
+/**
+ * Is this a PF2e (or SF2e) secret check? Those systems mark a roll with the `secret` trait in
+ * `flags.<system>.context` and send it as a core blind or GM roll, which every player's browser still
+ * receives. `systemId` is the flag scope the system writes under.
+ */
+export function isSecretCheck(source: { flags?: Record<string, unknown> } | undefined, systemId: string): boolean {
+  const context = (source?.flags?.[systemId] as { context?: { secret?: unknown; options?: unknown } } | undefined)
+    ?.context;
+  if (!context) return false;
+  if (context.secret === true) return true;
+  return Array.isArray(context.options) && context.options.includes('secret');
+}
+
 /** Every GM who is connected right now, except the sender. These are the only socket recipients. */
 export function gmRecipients(users: Iterable<UserLike>, selfId: string): string[] {
   const ids: string[] = [];

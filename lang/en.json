@@ -6,6 +6,8 @@
     "NoGM": "No GM is connected, so the Invisi-Roll was not made. Nothing was sent.",
     "RenderFailed": "An Invisi-Roll arrived but could not be shown. See the console.",
     "HistoryCleared": "Invisi cards cleared from this browser.",
+    "SecretChecks": "Secret checks are Invisi-Rolls",
+    "SecretChecksHint": "PF2e and SF2e: send checks with the secret trait (Recall Knowledge, Seek, Sense Motive and so on) as Invisi-Rolls, so players' browsers never receive them. Off: they stay core blind or GM rolls.",
     "GMOnly": "Only a GM can manage Invisi cards.",
     "Help": "Invisi cards stay in your chat log, in place, after a reload. Type /invisi clear to remove them from this browser."
   }
