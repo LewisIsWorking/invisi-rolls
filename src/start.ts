@@ -22,6 +22,7 @@ import {
   gmRecipients,
   isInvisi,
   isPayload,
+  isSecretCheck,
   makePayload,
   takeMarked,
   toWire,
@@ -36,6 +37,9 @@ declare const CONFIG: any;
 declare const Hooks: any;
 declare const foundry: any;
 
+
+/** Namespaced by the host's flag scope, so the key must not clash with a system's own settings. */
+const SECRET_SETTING = 'invisiSecretChecks';
 
 const t = (key: string): string => game.i18n.localize(`INVISI.${key}`);
 
@@ -61,6 +65,21 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
       chatData['blind'] = true;
     },
   };
+
+  /**
+   * PF2e and SF2e secret checks (Recall Knowledge, Seek, Sense Motive...) are core blind or GM rolls,
+   * which every player's browser receives. With this on, they go through Invisi instead.
+   */
+  game.settings.register(flagScope, SECRET_SETTING, {
+    name: 'INVISI.SecretChecks',
+    hint: 'INVISI.SecretChecksHint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+  });
+  const secretChecksInvisi = (source: unknown): boolean =>
+    game.settings.get(flagScope, SECRET_SETTING) === true && isSecretCheck(source as any, game.system.id);
 
   /** The English strings, for a host whose manifest does not list lang/en.json. Never overwrites. */
   Hooks.once('i18nInit', () => {
@@ -104,7 +123,7 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
   /** The interception: mark the message now, take it once every other module has finished it. */
   Hooks.on('preCreateChatMessage', (message: any, _data: unknown, options: any, userId: string) => {
     if (userId !== game.user.id) return;
-    if (!isInvisi(options, message._source, flagScope)) return;
+    if (!isInvisi(options, message._source, flagScope) && !secretChecksInvisi(message._source)) return;
     message.updateSource({ flags: { [flagScope]: { invisi: true } } });
     if (operationWrapped) {
       marked.add(message);

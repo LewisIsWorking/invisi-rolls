@@ -210,6 +210,28 @@ try {
   const afterSecond = await hpBecomes(gm.page, actorId, afterFirst - 7);
   check('second Apply Damage took another 7 HP', afterSecond === afterFirst - 7, `${afterFirst} -> ${afterSecond}`);
 
+  // A secret check (the secret trait, as Recall Knowledge or Seek carry) with the setting at its
+  // default: PF2e would send it as a core GM roll that reaches the player; it must be Invisi instead.
+  const framesBefore = player.frames.length;
+  const secretCheck = await gm.page.evaluate(async (id) => {
+    const g = globalThis as any;
+    const token = g.game.scenes.active.tokens.find((t: any) => t.actorId === id);
+    const seen = new Set(g.game.messages.contents.map((m: any) => m.id));
+    await token.actor.perception.roll({ extraRollOptions: ['secret'], skipDialog: true });
+    for (let i = 0; i < 40; i++) {
+      const m = g.game.messages.contents.find((x: any) => !seen.has(x.id));
+      if (m) {
+        return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), secret: m.flags.pf2e?.context?.secret === true };
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return null;
+  }, actorId);
+  check('a secret check becomes a GM-local Invisi card', !!secretCheck?.local && !!secretCheck?.secret, JSON.stringify(secretCheck));
+  await gm.page.waitForTimeout(5000);
+  const secretFrames = player.frames.slice(framesBefore).filter((f) => f.includes('"secret":true'));
+  check('player received no frame of the secret check', secretFrames.length === 0, `${secretFrames.length} frames`);
+
   check('player received no frame with the Invisi card', !player.frames.some((f) => SECRET.test(f)));
   check('player holds no Invisi document', !(await player.page.evaluate(() =>
     JSON.stringify((globalThis as any).game.messages.contents.map((m: any) => m.toObject())),

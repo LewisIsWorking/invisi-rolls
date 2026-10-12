@@ -7,6 +7,7 @@ import {
   decideRoute,
   gmRecipients,
   isInvisi,
+  isSecretCheck,
   isPayload,
   makePayload,
   standaloneActive,
@@ -146,5 +147,29 @@ describe('takeMarked', () => {
     const batch = [1, 2, 3];
     expect(takeMarked(batch, () => false)).toEqual([]);
     expect(batch).toEqual([1, 2, 3]);
+  });
+});
+
+describe('isSecretCheck', () => {
+  it('is true when the system marks the check context secret', () => {
+    expect(isSecretCheck({ flags: { pf2e: { context: { secret: true } } } }, 'pf2e')).toBe(true);
+  });
+
+  it('is true when the roll options carry the secret trait', () => {
+    expect(isSecretCheck({ flags: { sf2e: { context: { options: ['action:seek', 'secret'] } } } }, 'sf2e')).toBe(true);
+  });
+
+  it('is false for an ordinary check', () => {
+    expect(isSecretCheck({ flags: { pf2e: { context: { secret: false, options: ['action:strike'] } } } }, 'pf2e')).toBe(false);
+  });
+
+  it('only reads the given system scope', () => {
+    expect(isSecretCheck({ flags: { pf2e: { context: { secret: true } } } }, 'dnd5e')).toBe(false);
+  });
+
+  it('is false without flags or context', () => {
+    expect(isSecretCheck(undefined, 'pf2e')).toBe(false);
+    expect(isSecretCheck({}, 'pf2e')).toBe(false);
+    expect(isSecretCheck({ flags: { pf2e: {} } }, 'pf2e')).toBe(false);
   });
 });
