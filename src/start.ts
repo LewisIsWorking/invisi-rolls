@@ -24,6 +24,7 @@ import {
   isPayload,
   isSecretCheck,
   makePayload,
+  revealSource,
   takeMarked,
   toWire,
 } from './routing.ts';
@@ -123,6 +124,8 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
   /** The interception: mark the message now, take it once every other module has finished it. */
   Hooks.on('preCreateChatMessage', (message: any, _data: unknown, options: any, userId: string) => {
     if (userId !== game.user.id) return;
+    // A card the GM revealed is public on purpose, even when it began as a secret check.
+    if (message._source.flags?.[flagScope]?.revealed === true) return;
     if (!isInvisi(options, message._source, flagScope) && !secretChecksInvisi(message._source)) return;
     message.updateSource({ flags: { [flagScope]: { invisi: true } } });
     if (operationWrapped) {
@@ -175,6 +178,16 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     // Nice animates from that hook. Calling showForRoll as well rolled every die twice.
   }
 
+  /**
+   * Post an Invisi card to everyone as an ordinary public message, then drop this GM's local copy.
+   * Other GMs keep their own copies; the public message is the one the table sees.
+   */
+  async function reveal(message: any): Promise<void> {
+    if (!game.user.isGM || !isLocal(message)) return;
+    await CONFIG.ChatMessage.documentClass.create(revealSource(message.toObject(), flagScope), { messageMode: 'public' });
+    await message.delete();
+  }
+
   function clear(): void {
     clearHistory(storage(), historyKey(game.world.id));
     dropAllLocal();
@@ -187,6 +200,19 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     const badge = document.createElement('div');
     badge.className = 'invisi-roll-badge';
     badge.innerHTML = `<i class="fa-solid fa-ghost"></i> ${t('Badge')}`;
+    if (game.user.isGM && isLocal(message)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'invisi-roll-reveal';
+      button.dataset['tooltip'] = t('RevealHint');
+      button.innerHTML = `<i class="fa-solid fa-eye"></i> ${t('Reveal')}`;
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void reveal(message);
+      });
+      badge.append(button);
+    }
     html.querySelector('.message-header')?.after(badge);
   });
 
@@ -214,5 +240,6 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     history: () => readHistory(storage(), historyKey(game.world.id)),
     clearHistory: clear,
     isLocal,
+    reveal,
   };
 }

@@ -35,6 +35,8 @@ export interface InvisiApi {
   clearHistory(): void;
   /** Is this ChatMessage one of ours, held only in this browser? */
   isLocal(message: unknown): boolean;
+  /** GM only: post this Invisi card to everyone as a public message and drop the local copy. */
+  reveal(message: unknown): Promise<void>;
 }
 
 export function embedInvisiRolls(host: InvisiHost): InvisiApi | null {

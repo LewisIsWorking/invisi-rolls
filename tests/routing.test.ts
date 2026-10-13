@@ -8,6 +8,7 @@ import {
   gmRecipients,
   isInvisi,
   isSecretCheck,
+  revealSource,
   isPayload,
   makePayload,
   standaloneActive,
@@ -171,5 +172,41 @@ describe('isSecretCheck', () => {
     expect(isSecretCheck(undefined, 'pf2e')).toBe(false);
     expect(isSecretCheck({}, 'pf2e')).toBe(false);
     expect(isSecretCheck({ flags: { pf2e: {} } }, 'pf2e')).toBe(false);
+  });
+});
+
+describe('revealSource', () => {
+  const card = {
+    _id: 'abc123',
+    flavor: 'Seek',
+    rolls: ['{"total":17}'],
+    whisper: ['gm1', 'gm2'],
+    blind: true,
+    flags: { [MODULE_ID]: { invisi: true }, pf2e: { context: { secret: true } } },
+  };
+
+  it('makes a public message: no id, no whisper list, not blind', () => {
+    const out = revealSource(card, MODULE_ID);
+    expect(out['_id']).toBeUndefined();
+    expect(out['whisper']).toEqual([]);
+    expect(out['blind']).toBe(false);
+  });
+
+  it('swaps the Invisi mark for a revealed mark, so it is not taken again', () => {
+    const out = revealSource(card, MODULE_ID);
+    expect(out['flags'][MODULE_ID]).toEqual({ revealed: true });
+  });
+
+  it('keeps the rolls, flavor and system flags', () => {
+    const out = revealSource(card, MODULE_ID);
+    expect(out['rolls']).toEqual(card.rolls);
+    expect(out['flavor']).toBe('Seek');
+    expect(out['flags'].pf2e).toEqual({ context: { secret: true } });
+  });
+
+  it('leaves the card it was given untouched', () => {
+    revealSource(card, MODULE_ID);
+    expect(card._id).toBe('abc123');
+    expect(card.flags[MODULE_ID]).toEqual({ invisi: true });
   });
 });

@@ -54,6 +54,24 @@ export function isSecretCheck(source: { flags?: Record<string, unknown> } | unde
   return Array.isArray(context.options) && context.options.includes('secret');
 }
 
+/**
+ * The source data for revealing an Invisi card to everyone: the same message, as a fresh public one.
+ * Drops the id (the server assigns one), the Invisi mark, the GM whisper list and the blind flag, and
+ * keeps everything else, so the rolls, flavor and system flags (and the card's buttons) carry over.
+ */
+export function revealSource(source: Record<string, any>, flagScope: string): Record<string, any> {
+  const data = toWire(source);
+  delete data['_id'];
+  data['whisper'] = [];
+  data['blind'] = false;
+  const ours = data['flags']?.[flagScope];
+  if (ours) {
+    delete ours.invisi;
+    ours.revealed = true;
+  }
+  return data;
+}
+
 /** Every GM who is connected right now, except the sender. These are the only socket recipients. */
 export function gmRecipients(users: Iterable<UserLike>, selfId: string): string[] {
   const ids: string[] = [];

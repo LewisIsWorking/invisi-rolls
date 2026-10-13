@@ -181,6 +181,34 @@ try {
   check('history recorded all three on the GM browser', await gm.page.evaluate(
     () => (globalThis as any).__invisiApi().history().length >= 3,
   ));
+
+  // Reveal: the GM posts an Invisi card to everyone. Before the click the player has nothing of it;
+  // after, the player holds it as an ordinary message and the GM's local copy is gone.
+  await roll(gm, '1d1+8500', 'MARK_REVEAL', 'invisi');
+  await gm.page
+    .waitForFunction(() => document.querySelector('#chat')?.textContent?.includes('MARK_REVEAL'), null, { timeout: 120_000, polling: 1000 })
+    .catch(() => undefined);
+  await settle();
+  check('player has nothing of a card before it is revealed', !player.frames.some((f) => f.includes('MARK_REVEAL')));
+  const clicked = await gm.page.evaluate(() => {
+    const card = [...document.querySelectorAll('.chat-message.invisi-roll')].find((c) => c.textContent?.includes('MARK_REVEAL'));
+    const button = card?.querySelector('.invisi-roll-reveal') as HTMLElement | null;
+    button?.click();
+    return !!button;
+  });
+  check('the Invisi card has a Reveal button', clicked);
+  const playerHas = () =>
+    player.page.evaluate(() => (globalThis as any).game.messages.contents.some((m: any) => m.flavor === 'MARK_REVEAL'));
+  await player.page
+    .waitForFunction(() => (globalThis as any).game.messages.contents.some((m: any) => m.flavor === 'MARK_REVEAL'), null, { timeout: 120_000, polling: 1000 })
+    .catch(() => undefined);
+  check('after Reveal the player has the roll', await playerHas());
+  const gmCopies = await gm.page.evaluate(() => {
+    const g = globalThis as any;
+    const api = g.__invisiApi();
+    return g.game.messages.contents.filter((m: any) => m.flavor === 'MARK_REVEAL').map((m: any) => api.isLocal(m));
+  });
+  check('after Reveal the GM holds one public copy and no local one', gmCopies.length === 1 && gmCopies[0] === false, JSON.stringify(gmCopies));
 } finally {
   await browser.close();
 }
