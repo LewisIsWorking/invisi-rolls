@@ -24,6 +24,7 @@ import {
   isPayload,
   isSecretCheck,
   makePayload,
+  makeRevealPayload,
   revealSource,
   takeMarked,
   toWire,
@@ -95,7 +96,8 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
   Hooks.once('ready', () => {
     game.socket.on(socket, (payload: unknown) => {
       if (!game.user.isGM || !isPayload(payload)) return;
-      void receive(payload.message);
+      if (payload.type === 'reveal') void dropRevealed(payload.id);
+      else void receive(payload.message);
     });
   });
 
@@ -179,13 +181,21 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
   }
 
   /**
-   * Post an Invisi card to everyone as an ordinary public message, then drop this GM's local copy.
-   * Other GMs keep their own copies; the public message is the one the table sees.
+   * Post an Invisi card to everyone as an ordinary public message, then drop this GM's local copy and
+   * tell the other GMs to drop theirs, so nobody is left holding the card twice.
    */
   async function reveal(message: any): Promise<void> {
     if (!game.user.isGM || !isLocal(message)) return;
     await CONFIG.ChatMessage.documentClass.create(revealSource(message.toObject(), flagScope), { messageMode: 'public' });
+    const others = gmRecipients(game.users, game.user.id);
+    if (others.length > 0) game.socket.emit(socket, makeRevealPayload(message.id), { recipients: others });
     await message.delete();
+  }
+
+  /** Another GM revealed a card: drop this GM's local copy of it, if there is one. */
+  async function dropRevealed(id: string): Promise<void> {
+    const message = game.messages.get(id);
+    if (message && isLocal(message)) await message.delete();
   }
 
   function clear(): void {

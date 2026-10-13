@@ -11,6 +11,7 @@ import {
   revealSource,
   isPayload,
   makePayload,
+  makeRevealPayload,
   standaloneActive,
   takeMarked,
   toWire,
@@ -99,6 +100,17 @@ describe('payload', () => {
 
   it('rejects anything that is not a version 1 roll payload', () => {
     for (const bad of [null, 'roll', {}, { v: 2, type: 'roll', message: {} }, { v: 1, type: 'x', message: {} }, { v: 1, type: 'roll', message: null }]) {
+      expect(isPayload(bad)).toBe(false);
+    }
+  });
+
+  it('round-trips a reveal through isPayload', () => {
+    expect(isPayload(makeRevealPayload('abc123'))).toEqual(true);
+    expect(makeRevealPayload('abc123')).toEqual({ v: 1, type: 'reveal', id: 'abc123' });
+  });
+
+  it('rejects a reveal without a usable id', () => {
+    for (const bad of [{ v: 1, type: 'reveal' }, { v: 1, type: 'reveal', id: '' }, { v: 1, type: 'reveal', id: 7 }, { v: 2, type: 'reveal', id: 'a' }]) {
       expect(isPayload(bad)).toBe(false);
     }
   });
