@@ -41,7 +41,11 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
   page.on('pageerror', (e) => console.log(`[${name} page error] ${String(e).slice(0, 300)}`));
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
   await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
-  await page.fill('input[name=username]', name);
+  // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
+  await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
+  const picker = page.locator('select[name=userId]');
+  if (await picker.count()) await picker.selectOption({ label: name });
+  else await page.fill('input[name=username]', name);
   // A server reachable from the internet needs passwords; the throwaway one does not.
   if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });

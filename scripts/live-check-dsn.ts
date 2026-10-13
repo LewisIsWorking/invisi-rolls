@@ -21,7 +21,11 @@ async function join(browser: Browser, name: string): Promise<Page> {
   ctx.setDefaultTimeout(900_000);
   const page = await ctx.newPage();
   await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 900_000 });
-  await page.fill('input[name=username]', name);
+  // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
+  await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
+  const picker = page.locator('select[name=userId]');
+  if (await picker.count()) await picker.selectOption({ label: name });
+  else await page.fill('input[name=username]', name);
   // A server reachable from the internet needs passwords; the throwaway one does not.
   if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
