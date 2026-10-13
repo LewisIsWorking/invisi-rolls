@@ -209,7 +209,7 @@ describe('revealSource', () => {
     expect(out).toEqual({ content: 'hi', whisper: [], blind: false });
   });
 
-  it('leaves other modules' flags alone when ours are missing', () => {
+  it('leaves the flags of other modules alone when ours are missing', () => {
     const out = revealSource({ flags: { other: { a: 1 } } }, MODULE_ID);
     expect(out['flags']).toEqual({ other: { a: 1 } });
   });
