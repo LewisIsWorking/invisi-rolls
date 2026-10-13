@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.4.1
+
+### Patch Changes
+
+- [#16](https://github.com/LewisIsWorking/invisi-rolls/pull/16) [`60da850`](https://github.com/LewisIsWorking/invisi-rolls/commit/60da850b41b950bd4734f4635564a39dfa55b9a5) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Revealing a card now removes it from every GM's chat, not only the GM who clicked Reveal.
+
 ## 0.4.0
 
 ### Minor Changes
