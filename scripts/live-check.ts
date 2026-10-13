@@ -17,6 +17,8 @@ const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 // A real world usually has its own "Gamemaster" already; name the test GM account instead.
 const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
+// A second GM, to prove a Reveal clears every GM's copy, not only the clicker's.
+const GM2 = process.env['FOUNDRY_GM2'] ?? 'Gamemaster (2)';
 const SLOW = { timeout: 300_000, polling: 1000 };
 const EMBEDDED = process.env['INVISI_EMBEDDED'] === '1';
 
@@ -74,17 +76,17 @@ const check = (name: string, ok: boolean, detail = '') => {
 const browser = await chromium.launch();
 try {
   const gm = await join(browser, GM);
-  const needsReload = await gm.page.evaluate(async (embedded) => {
+  const needsReload = await gm.page.evaluate(async ([embedded, gm2]) => {
     const g = (globalThis as any).game;
-    for (const name of ['Player', 'Other']) {
-      if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role: 1, password: (globalThis as any).__pw });
+    for (const [name, role] of [['Player', 1], ['Other', 1], [gm2, 4]] as const) {
+      if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role, password: (globalThis as any).__pw });
     }
     const config = g.settings.get('core', 'moduleConfiguration');
     // Embedded, the module must be OFF: with it on, the system's copy stands aside by design.
     if (!!config['invisi-rolls'] === !embedded) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': !embedded });
     return true;
-  }, EMBEDDED);
+  }, [EMBEDDED, GM2] as const);
   if (needsReload) {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm);
@@ -100,6 +102,7 @@ try {
 
   const player = await join(browser, 'Player');
   const other = await join(browser, 'Other');
+  const gm2 = await join(browser, GM2);
   const settle = () => gm.page.waitForTimeout(3000);
   const roll = (c: Client, formula: string, flavor: string, mode?: string) =>
     c.page.evaluate(
@@ -190,6 +193,12 @@ try {
     .catch(() => undefined);
   await settle();
   check('player has nothing of a card before it is revealed', !player.frames.some((f) => f.includes('MARK_REVEAL')));
+  const before = await gm2.page.evaluate(() => {
+    const g = globalThis as any;
+    const api = g.__invisiApi();
+    return g.game.messages.contents.filter((m: any) => m.flavor === 'MARK_REVEAL').map((m: any) => api.isLocal(m));
+  });
+  check('the second GM holds a local copy before the Reveal', before.length === 1 && before[0] === true, JSON.stringify(before));
   const clicked = await gm.page.evaluate(() => {
     const card = [...document.querySelectorAll('.chat-message.invisi-roll')].find((c) => c.textContent?.includes('MARK_REVEAL'));
     const button = card?.querySelector('.invisi-roll-reveal') as HTMLElement | null;
@@ -209,6 +218,27 @@ try {
     return g.game.messages.contents.filter((m: any) => m.flavor === 'MARK_REVEAL').map((m: any) => api.isLocal(m));
   });
   check('after Reveal the GM holds one public copy and no local one', gmCopies.length === 1 && gmCopies[0] === false, JSON.stringify(gmCopies));
+  // The second GM got the card by socket forward; the Reveal must take that copy away too.
+  const gm2Copies = () =>
+    gm2.page.evaluate(() => {
+      const g = globalThis as any;
+      const api = g.__invisiApi();
+      return g.game.messages.contents.filter((m: any) => m.flavor === 'MARK_REVEAL').map((m: any) => api.isLocal(m));
+    });
+  await gm2.page
+    .waitForFunction(
+      () => {
+        const g = globalThis as any;
+        const api = g.__invisiApi();
+        const copies = g.game.messages.contents.filter((m: any) => m.flavor === 'MARK_REVEAL');
+        return copies.length === 1 && !api.isLocal(copies[0]);
+      },
+      null,
+      { timeout: 60_000, polling: 1000 },
+    )
+    .catch(() => undefined);
+  const second = await gm2Copies();
+  check('after Reveal the second GM also holds one public copy and no local one', second.length === 1 && second[0] === false, JSON.stringify(second));
 } finally {
   await browser.close();
 }

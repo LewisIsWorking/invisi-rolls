@@ -100,13 +100,14 @@ export function decideRoute(isGM: boolean, recipients: string[]): Route {
   return { kind: 'player', sendTo: recipients };
 }
 
-/** The socket payload. Versioned so an older client can ignore a shape it does not understand. */
-export interface InvisiPayload {
-  v: 1;
-  type: 'roll';
-  /** The ChatMessage source data, exactly as it would have been created. */
-  message: Record<string, unknown>;
-}
+/**
+ * The socket payloads. Versioned so an older client can ignore a shape it does not understand.
+ * A roll carries the ChatMessage source data, exactly as it would have been created. A reveal names a
+ * card another GM revealed, so every GM drops their local copy of it: all copies share one id.
+ */
+export type InvisiPayload =
+  | { v: 1; type: 'roll'; message: Record<string, unknown> }
+  | { v: 1; type: 'reveal'; id: string };
 
 /**
  * Message source data as the server or a socket would carry it: plain JSON. Systems can leave live
@@ -134,10 +135,17 @@ export function makePayload(message: Record<string, unknown>): InvisiPayload {
   return { v: 1, type: 'roll', message };
 }
 
+export function makeRevealPayload(id: string): InvisiPayload {
+  return { v: 1, type: 'reveal', id };
+}
+
 export function isPayload(value: unknown): value is InvisiPayload {
   if (typeof value !== 'object' || value === null) return false;
-  const p = value as Partial<InvisiPayload>;
-  return p.v === 1 && p.type === 'roll' && typeof p.message === 'object' && p.message !== null;
+  const p = value as { v?: unknown; type?: unknown; message?: unknown; id?: unknown };
+  if (p.v !== 1) return false;
+  if (p.type === 'roll') return typeof p.message === 'object' && p.message !== null;
+  if (p.type === 'reveal') return typeof p.id === 'string' && p.id !== '';
+  return false;
 }
 
 /**
