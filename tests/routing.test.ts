@@ -204,6 +204,16 @@ describe('revealSource', () => {
     expect(out['flags'].pf2e).toEqual({ context: { secret: true } });
   });
 
+  it('copes with a card that has no flags at all', () => {
+    const out = revealSource({ _id: 'x', content: 'hi' }, MODULE_ID);
+    expect(out).toEqual({ content: 'hi', whisper: [], blind: false });
+  });
+
+  it('leaves other modules' flags alone when ours are missing', () => {
+    const out = revealSource({ flags: { other: { a: 1 } } }, MODULE_ID);
+    expect(out['flags']).toEqual({ other: { a: 1 } });
+  });
+
   it('leaves the card it was given untouched', () => {
     revealSource(card, MODULE_ID);
     expect(card._id).toBe('abc123');
