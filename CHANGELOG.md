@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.4.0
+
+### Minor Changes
+
+- [#14](https://github.com/LewisIsWorking/invisi-rolls/pull/14) [`1d5a105`](https://github.com/LewisIsWorking/invisi-rolls/commit/1d5a105a37ea83bc32d644196b25e45451dad7ca) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Invisi cards have a Reveal button for the GM: it posts the roll to everyone as a normal chat message and removes the hidden copy.
+
 ## 0.3.0
 
 ### Minor Changes
