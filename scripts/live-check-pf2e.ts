@@ -225,7 +225,7 @@ try {
     for (let i = 0; i < 40; i++) {
       const m = g.game.messages.contents.find((x: any) => !seen.has(x.id));
       if (m) {
-        return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), secret: m.flags.pf2e?.context?.secret === true };
+        return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), secret: m.flags.pf2e?.context?.secret === true || !!m.flags.pf2e?.context?.options?.includes('secret') };
       }
       await new Promise((r) => setTimeout(r, 500));
     }
