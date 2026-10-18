@@ -40,7 +40,8 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
   });
   page.on('pageerror', (e) => console.log(`[${name} page error] ${String(e).slice(0, 300)}`));
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
-  await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
+  // A query string: the COO server sends a bare /join to its own portal; Foundry ignores the query.
+  await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
   // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
   await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
   const picker = page.locator('select[name=userId]');
@@ -225,7 +226,7 @@ try {
     for (let i = 0; i < 40; i++) {
       const m = g.game.messages.contents.find((x: any) => !seen.has(x.id));
       if (m) {
-        return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), secret: m.flags.pf2e?.context?.secret === true || !!m.flags.pf2e?.context?.options?.includes('secret') };
+        return { local: g.game.modules.get('invisi-rolls').api.isLocal(m), secret: m.flags[g.game.system.id]?.context?.secret === true || !!m.flags[g.game.system.id]?.context?.options?.includes('secret') };
       }
       await new Promise((r) => setTimeout(r, 500));
     }
