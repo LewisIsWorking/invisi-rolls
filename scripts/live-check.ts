@@ -47,7 +47,8 @@ async function join(browser: Browser, name: string): Promise<Client> {
   const page = await ctx.newPage();
   const frames: string[] = [];
   page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
-  await page.goto(`${URL}/join`, { waitUntil: 'domcontentloaded', timeout: 300_000 });
+  // A query string: the COO server sends a bare /join to its own portal; Foundry ignores the query.
+  await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 300_000 });
   // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
   await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
   const picker = page.locator('select[name=userId]');
