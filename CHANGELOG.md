@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.4.2
+
+### Patch Changes
+
+- [#20](https://github.com/LewisIsWorking/invisi-rolls/pull/20) [`e7add17`](https://github.com/LewisIsWorking/invisi-rolls/commit/e7add171145b6b160cc53dea642b3f7ba3cff700) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Verified for Foundry 14.369.
+
 ## 0.4.1
 
 ### Patch Changes
