@@ -1,0 +1,51 @@
+name: Verify latest Foundry
+
+# Daily: when a newer stable Foundry build ships, mark module.json verified for it and release a
+# patch, so the setup screen shows the module as compatible (green) instead of a Compatibility Risk.
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: verify-foundry
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    name: Bump verified and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Check the newest stable Foundry build
+        id: bump
+        run: node scripts/bump-verified.ts
+
+      # A push made with GITHUB_TOKEN triggers no workflow, so start the release by hand afterwards.
+      # With no changesets left, the release job tags the new version, packages it and publishes it.
+      - name: Version, push and release
+        if: steps.bump.outputs.verified
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED: ${{ steps.bump.outputs.verified }}
+        run: |
+          npm run changeset:version
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "chore: verify for Foundry ${VERIFIED}"
+          git push
+          gh workflow run release.yml --ref main
