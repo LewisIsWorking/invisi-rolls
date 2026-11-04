@@ -1,5 +1,11 @@
 # invisi-rolls
 
+## 0.4.3
+
+### Patch Changes
+
+- Verified for Foundry 14.370.
+
 ## 0.4.2
 
 ### Patch Changes
