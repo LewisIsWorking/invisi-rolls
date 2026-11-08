@@ -18,7 +18,9 @@ real game (it creates users and enables the module).
 7. `npm run check:live` (or set `FOUNDRY_URL` for another port).
 
 Against a server on the internet, set `FOUNDRY_PASSWORD` to the test users' password. On a copy of a
-real world that already has a "Gamemaster" user, set `FOUNDRY_GM` to the test GM's name.
+real world that already has a "Gamemaster" user, set `FOUNDRY_GM` to the test GM's name. If it also has users
+called Player or Other, set `FOUNDRY_PLAYER` and `FOUNDRY_OTHER` to the test players' names: with two
+users of one name the join page may pick the other one, and the sign-in is refused.
 
 The first join is slow on a machine with no GPU; the script disables the canvas to keep it usable.
 

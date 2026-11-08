@@ -17,6 +17,9 @@ const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 // A real world usually has its own "Gamemaster" already; name the test GM account instead.
 const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
+// Players too, for a world that already has users called Player or Other.
+const PLAYER = process.env['FOUNDRY_PLAYER'] ?? 'Player';
+const OTHER = process.env['FOUNDRY_OTHER'] ?? 'Other';
 // A second GM, to prove a Reveal clears every GM's copy, not only the clicker's.
 const GM2 = process.env['FOUNDRY_GM2'] ?? 'Gamemaster (2)';
 const SLOW = { timeout: 300_000, polling: 1000 };
@@ -25,6 +28,19 @@ const EMBEDDED = process.env['INVISI_EMBEDDED'] === '1';
 interface Client {
   page: Page;
   frames: string[];
+}
+
+/** Waits for the world, or fails at once when Foundry refuses the sign-in instead of after the long wait. */
+async function signedIn(page: Page, name: string): Promise<void> {
+  const refused = /invalid password|does not exist/i.source;
+  await page.waitForFunction(
+    (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
+    refused,
+    SLOW,
+  );
+  if (!(await page.evaluate(() => (globalThis as any).game?.ready === true))) {
+    throw new Error(`Foundry refused the sign-in for ${name}: check FOUNDRY_PASSWORD, and that only one user has that name`);
+  }
 }
 
 async function join(browser: Browser, name: string): Promise<Client> {
@@ -57,7 +73,7 @@ async function join(browser: Browser, name: string): Promise<Client> {
   // A server reachable from the internet needs passwords; the throwaway one does not.
   if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
-  await page.waitForFunction(() => (globalThis as any).game?.ready === true, null, SLOW);
+  await signedIn(page, name);
   await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
   return { page, frames };
 }
@@ -77,9 +93,9 @@ const check = (name: string, ok: boolean, detail = '') => {
 const browser = await chromium.launch();
 try {
   const gm = await join(browser, GM);
-  const needsReload = await gm.page.evaluate(async ([embedded, gm2]) => {
+  const needsReload = await gm.page.evaluate(async ([embedded, gm2, player, other]) => {
     const g = (globalThis as any).game;
-    for (const [name, role] of [['Player', 1], ['Other', 1], [gm2, 4]] as const) {
+    for (const [name, role] of [[player, 1], [other, 1], [gm2, 4]] as const) {
       if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role, password: (globalThis as any).__pw });
     }
     const config = g.settings.get('core', 'moduleConfiguration');
@@ -87,7 +103,7 @@ try {
     if (!!config['invisi-rolls'] === !embedded) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': !embedded });
     return true;
-  }, [EMBEDDED, GM2] as const);
+  }, [EMBEDDED, GM2, PLAYER, OTHER] as const);
   if (needsReload) {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm);
@@ -101,8 +117,8 @@ try {
   }
   check('mode is registered', await gm.page.evaluate(() => 'invisi' in (globalThis as any).CONFIG.ChatMessage.modes));
 
-  const player = await join(browser, 'Player');
-  const other = await join(browser, 'Other');
+  const player = await join(browser, PLAYER);
+  const other = await join(browser, OTHER);
   const gm2 = await join(browser, GM2);
   const settle = () => gm.page.waitForTimeout(3000);
   const roll = (c: Client, formula: string, flavor: string, mode?: string) =>
@@ -172,7 +188,7 @@ try {
   }, SECRET.source);
   check('GM holds all four, every one GM-local, none on the server', gmHeld.count === 4 && gmHeld.allLocal, JSON.stringify(gmHeld));
 
-  for (const [label, c] of [['Player', player], ['Other', other]] as const) {
+  for (const [label, c] of [[PLAYER, player], [OTHER, other]] as const) {
     check(`${label} received no Invisi frame`, !c.frames.some(leaks));
     check(`${label} holds no Invisi document`, !leaks(await docs(c)));
   }
