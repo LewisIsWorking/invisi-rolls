@@ -30,6 +30,50 @@ interface Client {
  */
 async function signIn(page: Page, name: string): Promise<void> {
   const refused = 'must select a user|invalid password|does not exist';
+  const picker = page.locator('select[name=userId]');
+  for (let attempt = 1; ; attempt++) {
+    if (await picker.count()) await picker.selectOption({ label: name });
+    else await page.fill('input[name=username]', name);
+    // A server reachable from the internet needs passwords; the throwaway one does not.
+    if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
+    await page.click('button[name=join]', { noWaitAfter: true });
+    await page.waitForFunction(
+      (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
+      refused,
+      SLOW,
+    );
+    if (await page.evaluate(() => (globalThis as any).game?.ready === true)) return;
+    const said = await page.evaluate(() => String(document.querySelector('#notifications')?.textContent ?? ''));
+    if (!/must select a user/i.test(said) || attempt === 3) {
+      throw new Error(`Foundry refused the sign-in for ${name}: ${said.trim().slice(0, 200)} (check FOUNDRY_PASSWORD, and that only one user has that name)`);
+    }
+    await page.evaluate(() => document.querySelectorAll('#notifications li').forEach((n) => n.remove()));
+  }
+}
+
+async function join(browser: Browser, name: string, canvas: boolean): Promise<Client> {
+  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+  if (!canvas) {
+    await ctx.addInitScript(() => {
+      try {
+        localStorage.setItem('core.noCanvas', 'true');
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+  ctx.setDefaultTimeout(600_000);
+  const page = await ctx.newPage();
+  const frames: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') console.log(`[${name} ${m.type()}] ${m.text().slice(0, 300)}`);
+  });
+  page.on('pageerror', (e) => console.log(`[${name} page error] ${String(e).slice(0, 300)}`));
+  page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
+  // A query string: the COO server sends a bare /join to its own portal; Foundry ignores the query.
+  await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
+  // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
+  await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
   await signIn(page, name);
   await ready(page);
   return { page, frames };
