@@ -16,36 +16,14 @@ const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
 const PLAYER = process.env['FOUNDRY_PLAYER'] ?? 'Player';
 const SLOW = { timeout: 900_000, polling: 1000 };
 
-/** Waits for the world, or fails at once when Foundry refuses the sign-in instead of after the long wait. */
-async function signedIn(page: Page, name: string): Promise<void> {
-  const refused = /invalid password|does not exist/i.source;
-  await page.waitForFunction(
-    (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
-    refused,
-    SLOW,
-  );
-  if (!(await page.evaluate(() => (globalThis as any).game?.ready === true))) {
-    throw new Error(`Foundry refused the sign-in for ${name}: check FOUNDRY_PASSWORD, and that only one user has that name`);
-  }
-}
-
-async function join(browser: Browser, name: string): Promise<Page> {
-  // The canvas stays ON: Dice So Nice disables itself in No-Canvas mode. With no GPU, the scene's
-  // render loop is stopped once loaded instead, which leaves Dice So Nice's own renderer running.
-  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
-  ctx.setDefaultTimeout(900_000);
-  const page = await ctx.newPage();
-  // A query string: the COO server sends a bare /join to its own portal; Foundry ignores the query.
-  await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 900_000 });
-  // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
-  await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
-  const picker = page.locator('select[name=userId]');
-  if (await picker.count()) await picker.selectOption({ label: name });
-  else await page.fill('input[name=username]', name);
-  // A server reachable from the internet needs passwords; the throwaway one does not.
-  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
-  await page.click('button[name=join]', { noWaitAfter: true });
-  await signedIn(page, name);
+/**
+ * Signs in and waits for the world. The join form can redraw while it is being filled, when someone
+ * else connects, and that empties the user picker: an empty pick is tried again. Any other refusal
+ * fails at once with Foundry's own message, rather than after the long wait.
+ */
+async function signIn(page: Page, name: string): Promise<void> {
+  const refused = 'must select a user|invalid password|does not exist';
+  await signIn(page, name);
   await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
   // Count every animation Dice So Nice starts, by its dice total (each roll below is dice-only, so the
   // totals 3, 5 and 7 name the roll).

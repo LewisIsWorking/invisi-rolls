@@ -30,50 +30,14 @@ interface Client {
   frames: string[];
 }
 
-/** Waits for the world, or fails at once when Foundry refuses the sign-in instead of after the long wait. */
-async function signedIn(page: Page, name: string): Promise<void> {
-  const refused = /invalid password|does not exist/i.source;
-  await page.waitForFunction(
-    (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
-    refused,
-    SLOW,
-  );
-  if (!(await page.evaluate(() => (globalThis as any).game?.ready === true))) {
-    throw new Error(`Foundry refused the sign-in for ${name}: check FOUNDRY_PASSWORD, and that only one user has that name`);
-  }
-}
-
-async function join(browser: Browser, name: string): Promise<Client> {
-  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
-  // No GPU here: a drawn scene through software WebGL starves the page for minutes.
-  await ctx.addInitScript(() => {
-    try {
-      localStorage.setItem('core.noCanvas', 'true');
-    } catch {
-      /* ignore */
-    }
-  });
-  // Where the api lives depends on who runs Invisi-Rolls: the module, or the system embedding it.
-  // An init script, so it survives the reloads below.
-  await ctx.addInitScript((embedded) => {
-    const g = globalThis as any;
-    g.__invisiApi = () => (embedded ? g.game.system.api?.invisiRolls : g.game.modules.get('invisi-rolls')?.api);
-  }, EMBEDDED);
-  ctx.setDefaultTimeout(600_000);
-  const page = await ctx.newPage();
-  const frames: string[] = [];
-  page.on('websocket', (ws) => ws.on('framereceived', (f) => frames.push(String(f.payload))));
-  // A query string: the COO server sends a bare /join to its own portal; Foundry ignores the query.
-  await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 300_000 });
-  // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
-  await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
-  const picker = page.locator('select[name=userId]');
-  if (await picker.count()) await picker.selectOption({ label: name });
-  else await page.fill('input[name=username]', name);
-  // A server reachable from the internet needs passwords; the throwaway one does not.
-  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
-  await page.click('button[name=join]', { noWaitAfter: true });
-  await signedIn(page, name);
+/**
+ * Signs in and waits for the world. The join form can redraw while it is being filled, when someone
+ * else connects, and that empties the user picker: an empty pick is tried again. Any other refusal
+ * fails at once with Foundry's own message, rather than after the long wait.
+ */
+async function signIn(page: Page, name: string): Promise<void> {
+  const refused = 'must select a user|invalid password|does not exist';
+  await signIn(page, name);
   await page.evaluate((pw) => ((globalThis as any).__pw = pw), PASSWORD);
   return { page, frames };
 }
