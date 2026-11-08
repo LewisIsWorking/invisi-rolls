@@ -13,12 +13,27 @@ const URL = process.env['FOUNDRY_URL'] ?? 'http://localhost:30077';
 const PASSWORD = process.env['FOUNDRY_PASSWORD'] ?? '';
 // A real world usually has its own "Gamemaster" already; name the test GM account instead.
 const GM = process.env['FOUNDRY_GM'] ?? 'Gamemaster';
+// Players too, for a world that already has users called Player or Other.
+const PLAYER = process.env['FOUNDRY_PLAYER'] ?? 'Player';
 const SLOW = { timeout: 600_000, polling: 1000 };
 const SECRET = /MARK_PF2E_INVISI/;
 
 interface Client {
   page: Page;
   frames: string[];
+}
+
+/** Waits for the world, or fails at once when Foundry refuses the sign-in instead of after the long wait. */
+async function signedIn(page: Page, name: string): Promise<void> {
+  const refused = /invalid password|does not exist/i.source;
+  await page.waitForFunction(
+    (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
+    refused,
+    SLOW,
+  );
+  if (!(await page.evaluate(() => (globalThis as any).game?.ready === true))) {
+    throw new Error(`Foundry refused the sign-in for ${name}: check FOUNDRY_PASSWORD, and that only one user has that name`);
+  }
 }
 
 async function join(browser: Browser, name: string, canvas: boolean): Promise<Client> {
@@ -50,6 +65,7 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
   // A server reachable from the internet needs passwords; the throwaway one does not.
   if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
   await page.click('button[name=join]', { noWaitAfter: true });
+  await signedIn(page, name);
   await ready(page);
   return { page, frames };
 }
@@ -136,7 +152,7 @@ try {
   const gm = await join(browser, GM, true);
   const needsReload = await gm.page.evaluate(async () => {
     const g = (globalThis as any).game;
-    if (!g.users.getName('Player')) await (globalThis as any).User.create({ name: 'Player', role: 1, password: (globalThis as any).__pw });
+    if (!g.users.getName(PLAYER)) await (globalThis as any).User.create({ name: PLAYER, role: 1, password: (globalThis as any).__pw });
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls']) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true });
@@ -154,7 +170,7 @@ try {
 
   const actorId = await stage(gm.page);
   await control(gm.page, actorId);
-  const player = await join(browser, 'Player', false);
+  const player = await join(browser, PLAYER, false);
 
   // CONTROL: the same click on an ordinary public damage card. If this fails too, the fault is the
   // test setup (selection, canvas), not the module, and the Invisi results below mean nothing.
