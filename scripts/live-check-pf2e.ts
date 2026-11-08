@@ -23,16 +23,31 @@ interface Client {
   frames: string[];
 }
 
-/** Waits for the world, or fails at once when Foundry refuses the sign-in instead of after the long wait. */
-async function signedIn(page: Page, name: string): Promise<void> {
-  const refused = /invalid password|does not exist/i.source;
-  await page.waitForFunction(
-    (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
-    refused,
-    SLOW,
-  );
-  if (!(await page.evaluate(() => (globalThis as any).game?.ready === true))) {
-    throw new Error(`Foundry refused the sign-in for ${name}: check FOUNDRY_PASSWORD, and that only one user has that name`);
+/**
+ * Signs in and waits for the world. The join form can redraw while it is being filled, when someone
+ * else connects, and that empties the user picker: an empty pick is tried again. Any other refusal
+ * fails at once with Foundry's own message, rather than after the long wait.
+ */
+async function signIn(page: Page, name: string): Promise<void> {
+  const refused = 'must select a user|invalid password|does not exist';
+  const picker = page.locator('select[name=userId]');
+  for (let attempt = 1; ; attempt++) {
+    if (await picker.count()) await picker.selectOption({ label: name });
+    else await page.fill('input[name=username]', name);
+    // A server reachable from the internet needs passwords; the throwaway one does not.
+    if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
+    await page.click('button[name=join]', { noWaitAfter: true });
+    await page.waitForFunction(
+      (re) => (globalThis as any).game?.ready === true || new RegExp(re, 'i').test(document.querySelector('#notifications')?.textContent ?? ''),
+      refused,
+      SLOW,
+    );
+    if (await page.evaluate(() => (globalThis as any).game?.ready === true)) return;
+    const said = await page.evaluate(() => String(document.querySelector('#notifications')?.textContent ?? ''));
+    if (!/must select a user/i.test(said) || attempt === 3) {
+      throw new Error(`Foundry refused the sign-in for ${name}: ${said.trim().slice(0, 200)} (check FOUNDRY_PASSWORD, and that only one user has that name)`);
+    }
+    await page.evaluate(() => document.querySelectorAll('#notifications li').forEach((n) => n.remove()));
   }
 }
 
@@ -59,13 +74,7 @@ async function join(browser: Browser, name: string, canvas: boolean): Promise<Cl
   await page.goto(`${URL}/join?live-check`, { waitUntil: 'domcontentloaded', timeout: 600_000 });
   // Foundry 14.369 lists the users in a dropdown; earlier builds had a name box.
   await page.waitForSelector('select[name=userId], input[name=username]', { timeout: 300_000 });
-  const picker = page.locator('select[name=userId]');
-  if (await picker.count()) await picker.selectOption({ label: name });
-  else await page.fill('input[name=username]', name);
-  // A server reachable from the internet needs passwords; the throwaway one does not.
-  if (PASSWORD) await page.fill('input[name=password]', PASSWORD);
-  await page.click('button[name=join]', { noWaitAfter: true });
-  await signedIn(page, name);
+  await signIn(page, name);
   await ready(page);
   return { page, frames };
 }
