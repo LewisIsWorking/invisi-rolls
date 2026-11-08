@@ -93,9 +93,9 @@ const check = (name: string, ok: boolean, detail = '') => {
 const browser = await chromium.launch();
 try {
   const gm = await join(browser, GM);
-  const needsReload = await gm.page.evaluate(async ([embedded, gm2]) => {
+  const needsReload = await gm.page.evaluate(async ([embedded, gm2, player, other]) => {
     const g = (globalThis as any).game;
-    for (const [name, role] of [[PLAYER, 1], [OTHER, 1], [gm2, 4]] as const) {
+    for (const [name, role] of [[player, 1], [other, 1], [gm2, 4]] as const) {
       if (!g.users.getName(name)) await (globalThis as any).User.create({ name, role, password: (globalThis as any).__pw });
     }
     const config = g.settings.get('core', 'moduleConfiguration');
@@ -103,7 +103,7 @@ try {
     if (!!config['invisi-rolls'] === !embedded) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': !embedded });
     return true;
-  }, [EMBEDDED, GM2] as const);
+  }, [EMBEDDED, GM2, PLAYER, OTHER] as const);
   if (needsReload) {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm);

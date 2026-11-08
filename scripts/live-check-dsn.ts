@@ -67,14 +67,14 @@ const check = (name: string, ok: boolean, detail = '') => {
 const browser = await chromium.launch();
 try {
   let gm = await join(browser, GM);
-  const needsReload = await gm.evaluate(async () => {
+  const needsReload = await gm.evaluate(async (player) => {
     const g = (globalThis as any).game;
-    if (!g.users.getName(PLAYER)) await (globalThis as any).User.create({ name: PLAYER, role: 1, password: (globalThis as any).__pw });
+    if (!g.users.getName(player)) await (globalThis as any).User.create({ name: player, role: 1, password: (globalThis as any).__pw });
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls'] && config['dice-so-nice']) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true, 'dice-so-nice': true });
     return true;
-  });
+  }, PLAYER);
   if (needsReload) {
     await gm.context().close();
     gm = await join(browser, GM);

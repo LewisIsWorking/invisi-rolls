@@ -150,14 +150,14 @@ async function clickApply(page: Page, cardSelector = '#chat li.chat-message.invi
 const browser = await chromium.launch();
 try {
   const gm = await join(browser, GM, true);
-  const needsReload = await gm.page.evaluate(async () => {
+  const needsReload = await gm.page.evaluate(async (player) => {
     const g = (globalThis as any).game;
-    if (!g.users.getName(PLAYER)) await (globalThis as any).User.create({ name: PLAYER, role: 1, password: (globalThis as any).__pw });
+    if (!g.users.getName(player)) await (globalThis as any).User.create({ name: player, role: 1, password: (globalThis as any).__pw });
     const config = g.settings.get('core', 'moduleConfiguration');
     if (config['invisi-rolls']) return false;
     await g.settings.set('core', 'moduleConfiguration', { ...config, 'invisi-rolls': true });
     return true;
-  });
+  }, PLAYER);
   if (needsReload) {
     await gm.page.reload({ waitUntil: 'domcontentloaded' });
     await ready(gm.page);
