@@ -121,6 +121,23 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
       return allowed;
     };
     operationWrapped = true;
+
+    /**
+     * Clear Chat Log deletes every id in the collection, and the server refuses an id it never stored,
+     * so a single Invisi card would stop the whole log clearing. Take the cards out first. Other GMs
+     * hear of it here too: when the log holds no world messages, no delete ever reaches them.
+     */
+    const originalDelete = cls.deleteDocuments;
+    cls.deleteDocuments = async function (ids: string[] = [], operation: any = {}) {
+      if (operation.deleteAll && game.user.isGM) {
+        const others = gmRecipients(game.users, game.user.id);
+        for (const message of game.messages.contents.filter(isLocal)) {
+          if (others.length > 0) game.socket.emit(socket, makeRevealPayload(message.id), { recipients: others });
+        }
+        clear();
+      }
+      return originalDelete.call(this, ids, operation);
+    };
   });
 
   /** The interception: mark the message now, take it once every other module has finished it. */
