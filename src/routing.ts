@@ -119,6 +119,20 @@ export function toWire<T>(source: T): T {
 }
 
 /**
+ * Clean a message's HTML fields IN PLACE. Foundry's server does this to every message it stores, and
+ * an Invisi message never reaches the server, so without this a tampered player client could run
+ * script on the GM's screen. A field that is not a string is emptied, as the server does, because the
+ * document would otherwise turn something like a one-item array into the very string it holds.
+ */
+export function cleanHtmlFields(data: Record<string, unknown>, clean: (html: string) => string): void {
+  for (const field of ['content', 'flavor']) {
+    const value = data[field];
+    if (value === undefined || value === null || value === '') continue;
+    data[field] = typeof value === 'string' ? clean(value) : '';
+  }
+}
+
+/**
  * Remove the marked items from `items` IN PLACE and return them, in order. In place because Foundry
  * sends the very array it passed to _preCreateOperation, so a copy would leave them in the request.
  */

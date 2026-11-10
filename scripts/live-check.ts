@@ -257,6 +257,60 @@ try {
   check('after Reveal the GM holds one public copy and no local one', first.length === 1 && first[0] === false, JSON.stringify(first));
   const second = await copies(gm2);
   check('after Reveal the second GM also holds one public copy and no local one', second.length === 1 && second[0] === false, JSON.stringify(second));
+
+  // A tampered client can put anything in the socket payload, and that payload never meets the server
+  // that cleans every other message's HTML. Both HTML fields carry a trap that fires if it is rendered.
+  const HOSTILE = `MARK_HOSTILE_${Date.now()}`;
+  const [gmId, channel] = await gm.page.evaluate((embedded) => {
+    const g = (globalThis as any).game;
+    return [g.user.id as string, embedded ? `system.${g.system.id}` : 'module.invisi-rolls'];
+  }, EMBEDDED);
+  await player.page.evaluate(([marker, id, ch]) => {
+    const g = globalThis as any;
+    const trap = (field: string) => `<img src="x" onerror="globalThis.__invisiHostile='${field}'">`;
+    const message = { _id: g.foundry.utils.randomID(), author: g.game.user.id, timestamp: Date.now(), flavor: trap('flavor'), content: `${marker}${trap('content')}` };
+    g.game.socket.emit(ch, { v: 1, type: 'roll', message }, { recipients: [id] });
+  }, [HOSTILE, gmId, channel] as const);
+  await gm.page
+    .waitForFunction((marker) => document.querySelector('#chat')?.textContent?.includes(marker), HOSTILE, { timeout: 120_000, polling: 1000 })
+    .catch(() => undefined);
+  await settle();
+  check('a card sent straight over the socket still shows, as text', (await gmLog()).includes(HOSTILE));
+  const fired = await gm.page.evaluate(() => (globalThis as any).__invisiHostile ?? null);
+  check('HTML in a card sent straight over the socket does not run on the GM', fired === null, String(fired));
+
+  // Clear Chat Log. This deletes the world's chat, so only point this script at a test world.
+  const flush = (): Promise<string> =>
+    gm.page.evaluate(() =>
+      (globalThis as any).ChatMessage.implementation.deleteDocuments([], { deleteAll: true }).then(
+        () => 'ok',
+        (err: Error) => err.message,
+      ),
+    );
+  const held = (c: Client) =>
+    c.page.evaluate(() => {
+      const g = globalThis as any;
+      const api = g.__invisiApi();
+      return { local: g.game.messages.contents.filter((m: any) => api.isLocal(m)).length, shown: document.querySelectorAll('#chat .invisi-roll').length };
+    });
+  const empty = (h: { local: number; shown: number }) => h.local === 0 && h.shown === 0;
+  await roll(gm, '1d1+8600', 'MARK_CLEAR_PUBLIC');
+  await roll(gm, '1d1+8601', 'MARK_CLEAR_WITH_PUBLIC', 'invisi');
+  await settle();
+  const withPublic = await flush();
+  await settle();
+  const afterPublic = [await held(gm), await held(gm2)] as const;
+  check('Clear Chat Log clears every GM\'s Invisi cards', withPublic === 'ok' && empty(afterPublic[0]) && empty(afterPublic[1]), `${withPublic} ${JSON.stringify(afterPublic)}`);
+  check('Clear Chat Log clears the stored cards', await gm.page.evaluate(() => (globalThis as any).__invisiApi().history().length === 0));
+
+  // The log now holds no world messages, so nothing on the server can be deleted.
+  await roll(gm, '1d1+8602', 'MARK_CLEAR_ALONE', 'invisi');
+  await settle();
+  const alone = await flush();
+  await settle();
+  const afterAlone = [await held(gm), await held(gm2)] as const;
+  check('Clear Chat Log clears every GM\'s Invisi cards when no other message exists', alone === 'ok' && empty(afterAlone[0]) && empty(afterAlone[1]), `${alone} ${JSON.stringify(afterAlone)}`);
+  check('Clear Chat Log clears the stored cards when no other message exists', await gm.page.evaluate(() => (globalThis as any).__invisiApi().history().length === 0));
 } finally {
   await browser.close();
 }

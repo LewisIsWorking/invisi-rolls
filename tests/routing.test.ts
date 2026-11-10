@@ -4,6 +4,7 @@ import {
   MODE,
   MODULE_ID,
   SOCKET,
+  cleanHtmlFields,
   decideRoute,
   gmRecipients,
   isInvisi,
@@ -230,5 +231,36 @@ describe('revealSource', () => {
     revealSource(card, MODULE_ID);
     expect(card._id).toBe('abc123');
     expect(card.flags[MODULE_ID]).toEqual({ invisi: true });
+  });
+});
+
+describe('cleanHtmlFields', () => {
+  const clean = (html: string) => html.replace(/<img[^>]*>/g, '');
+
+  it('cleans both HTML fields', () => {
+    const data = { content: 'a<img onerror="x">', flavor: '<img onerror="y">b' };
+    cleanHtmlFields(data, clean);
+    expect(data).toEqual({ content: 'a', flavor: 'b' });
+  });
+
+  it('leaves every other field alone', () => {
+    const data = { speaker: { alias: '<img>' }, content: 'a' };
+    cleanHtmlFields(data, clean);
+    expect(data.speaker.alias).toBe('<img>');
+  });
+
+  it('skips a field that is missing, null or empty', () => {
+    const data: Record<string, unknown> = { content: null, flavor: '' };
+    cleanHtmlFields(data, () => 'changed');
+    expect(data).toEqual({ content: null, flavor: '' });
+    const none: Record<string, unknown> = {};
+    cleanHtmlFields(none, () => 'changed');
+    expect(none).toEqual({});
+  });
+
+  it('empties a field that is not a string, so it cannot be stringified into HTML later', () => {
+    const data: Record<string, unknown> = { content: ['<img onerror="x">'] };
+    cleanHtmlFields(data, clean);
+    expect(data['content']).toBe('');
   });
 });
