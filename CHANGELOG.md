@@ -1,5 +1,13 @@
 # invisi-rolls
 
+## 0.4.4
+
+### Patch Changes
+
+- [#24](https://github.com/LewisIsWorking/invisi-rolls/pull/24) [`9815d62`](https://github.com/LewisIsWorking/invisi-rolls/commit/9815d62db940c1e7e66ea29b736d9ccaa141522e) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Clean the HTML of every Invisi card the way Foundry's server cleans ordinary chat. A card never reaches the server, so a tampered player client could otherwise run script on the GM's screen.
+
+- [#24](https://github.com/LewisIsWorking/invisi-rolls/pull/24) [`9815d62`](https://github.com/LewisIsWorking/invisi-rolls/commit/9815d62db940c1e7e66ea29b736d9ccaa141522e) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Clear Chat Log works again while a GM holds Invisi cards. Foundry asked the server to delete the cards too, the server refused, and nothing was cleared.
+
 ## 0.4.3
 
 ### Patch Changes
