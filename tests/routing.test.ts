@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MODE,
   MODULE_ID,
+  REVEAL_ROLLING_GRACE_MS,
   SOCKET,
   applyChanges,
   badgeFor,
@@ -15,6 +16,8 @@ import {
   isPayload,
   makePayload,
   makeRevealPayload,
+  revealCheck,
+  revealPosted,
   standaloneActive,
   takeMarked,
   toWire,
@@ -388,5 +391,45 @@ describe('badgeFor', () => {
   it('shows nothing on an ordinary message', () => {
     expect(badgeFor(false, false)).toBe('none');
     expect(badgeFor(false, true)).toBe('none');
+  });
+});
+
+describe('revealCheck', () => {
+  const ready = { isGM: true, local: true, busy: false, rolling: false, ageMs: 5_000 };
+
+  it('reveals a card this GM holds, once its dice have landed', () => {
+    expect(revealCheck(ready)).toBe('ok');
+  });
+
+  it('never reveals for a player, or a card that is not held in this browser', () => {
+    expect(revealCheck({ ...ready, isGM: false })).toBe('not-allowed');
+    expect(revealCheck({ ...ready, local: false })).toBe('not-allowed');
+  });
+
+  it('ignores a second click while the first reveal is still on its way', () => {
+    expect(revealCheck({ ...ready, busy: true })).toBe('busy');
+  });
+
+  it('waits while Dice So Nice is still rolling the card, when modules are still finishing it', () => {
+    expect(revealCheck({ ...ready, rolling: true, ageMs: 1_000 })).toBe('rolling');
+    expect(revealCheck({ ...ready, rolling: true, ageMs: REVEAL_ROLLING_GRACE_MS - 1 })).toBe('rolling');
+  });
+
+  it('stops waiting on dice that never finish, so a card can always be revealed in the end', () => {
+    expect(revealCheck({ ...ready, rolling: true, ageMs: REVEAL_ROLLING_GRACE_MS })).toBe('ok');
+  });
+});
+
+describe('revealPosted', () => {
+  it('is true only when the server gave back the public message', () => {
+    expect(revealPosted({ id: 'abc' })).toBe(true);
+  });
+
+  it('is false when a module cancelled the create, so the GM keeps the card', () => {
+    expect(revealPosted(undefined)).toBe(false);
+    expect(revealPosted(null)).toBe(false);
+    expect(revealPosted(false)).toBe(false);
+    expect(revealPosted({})).toBe(false);
+    expect(revealPosted({ id: '' })).toBe(false);
   });
 });
