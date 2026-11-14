@@ -348,6 +348,16 @@ describe('applyChanges', () => {
     expect(out['flags']['pf2e-toolbelt']).toEqual({});
   });
 
+  it('honours Foundry replacement keys, and merges a path written both ways', () => {
+    const out = applyChanges(world, {
+      flags: { pf2e: { '==origin': { item: 'x' } } },
+      'flags.pf2e-toolbelt': { targetHelper: { save: 'reflex' } },
+      'flags.pf2e-toolbelt.targetHelper': { options: [] },
+    });
+    expect(out['flags'].pf2e).toEqual({ origin: { item: 'x' }, casting: { id: 'entry' } });
+    expect(out['flags']['pf2e-toolbelt'].targetHelper).toEqual({ targets: ['t1', 't2', 't3'], save: 'reflex', options: [] });
+  });
+
   it('puts an object where the message had none', () => {
     const out = applyChanges({ content: 'x' }, { flags: { pf2e: { a: 1 } } });
     expect(out['flags']).toEqual({ pf2e: { a: 1 } });

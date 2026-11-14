@@ -18,6 +18,8 @@ import { addLocal, dropAllLocal, isLocal, restoreLocal, storage } from './local-
 import {
   MODE,
   MODULE_ID,
+  applyChanges,
+  badgeFor,
   decideRoute,
   gmRecipients,
   isInvisi,
@@ -28,6 +30,7 @@ import {
   revealSource,
   takeMarked,
   toWire,
+  updateMarksInvisi,
 } from './routing.ts';
 // Type-only, so no cycle at runtime: the types live in index.ts so its declaration file stands alone.
 import type { InvisiApi, InvisiHost } from './index.ts';
@@ -117,7 +120,7 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     cls._preCreateOperation = async function (documents: any[], operation: any, user: any) {
       const allowed = await original.call(this, documents, operation, user);
       if (allowed === false) return false;
-      for (const message of takeMarked(documents, (d) => marked.has(d))) dispatch(sourceOf(message));
+      for (const message of takeMarked(documents, (d) => marked.has(d))) dispatch(sourceOf(message.toObject()));
       return allowed;
     };
     operationWrapped = true;
@@ -153,12 +156,26 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     }
     // Without the wrapper (it failed to install), cancel here: later hooks miss out, but the message
     // still never reaches the server.
-    dispatch(sourceOf(message));
+    dispatch(sourceOf(message.toObject()));
     return false;
   });
 
-  function sourceOf(message: any): Record<string, any> {
-    const source = toWire(message.toObject());
+  /**
+   * The other way a card reached players: an UPDATE that writes our mark into a world message. PF2e's
+   * spell variant buttons (choosing a save on a cast card, for one) rebuild the card in the current
+   * message mode and update the existing message with it, so in Invisi mode the GM's rebuilt card,
+   * mark and all, went to every player who already had the message. Stop the update and send the card
+   * it would have made to the GMs instead; the world message stays as it was.
+   */
+  Hooks.on('preUpdateChatMessage', (message: any, changes: unknown, _options: unknown, userId: string) => {
+    if (userId !== game.user.id || isLocal(message)) return;
+    if (!updateMarksInvisi(changes, flagScope)) return;
+    dispatch(sourceOf(applyChanges(message.toObject(), changes as Record<string, any>)));
+    return false;
+  });
+
+  function sourceOf(data: Record<string, any>): Record<string, any> {
+    const source = toWire(data);
     source._id = foundry.utils.randomID();
     source.timestamp = Date.now();
     source.flags ??= {};
@@ -220,14 +237,26 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     dropAllLocal();
   }
 
-  /** Mark Invisi cards so the GM can tell at a glance that players cannot see them. */
+  /**
+   * Mark Invisi cards so the GM can tell at a glance that players cannot see them. A WORLD message with
+   * our mark is the opposite: every player has it (another module or an old version put it there), so
+   * it gets a warning instead of the promise.
+   */
   Hooks.on('renderChatMessageHTML', (message: any, html: HTMLElement) => {
-    if (message.getFlag?.(flagScope, 'invisi') !== true) return;
-    html.classList.add('invisi-roll');
+    const badgeKind = badgeFor(message.getFlag?.(flagScope, 'invisi') === true, isLocal(message));
+    if (badgeKind === 'none') return;
     const badge = document.createElement('div');
+    if (badgeKind === 'leaked') {
+      if (!game.user.isGM) return;
+      badge.className = 'invisi-roll-badge invisi-roll-leaked';
+      badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${t('Leaked')}`;
+      html.querySelector('.message-header')?.after(badge);
+      return;
+    }
+    html.classList.add('invisi-roll');
     badge.className = 'invisi-roll-badge';
     badge.innerHTML = `<i class="fa-solid fa-ghost"></i> ${t('Badge')}`;
-    if (game.user.isGM && isLocal(message)) {
+    if (game.user.isGM) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'invisi-roll-reveal';

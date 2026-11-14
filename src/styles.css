@@ -21,3 +21,8 @@
   line-height: 18px;
   font-size: var(--font-size-11, 11px);
 }
+
+/* A world message that carries the Invisi mark: every player has it, so warn rather than reassure. */
+.invisi-roll-badge.invisi-roll-leaked {
+  color: #c0392b;
+}
