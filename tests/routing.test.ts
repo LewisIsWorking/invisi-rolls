@@ -4,6 +4,8 @@ import {
   MODE,
   MODULE_ID,
   SOCKET,
+  applyChanges,
+  badgeFor,
   cleanHtmlFields,
   decideRoute,
   gmRecipients,
@@ -16,6 +18,7 @@ import {
   standaloneActive,
   takeMarked,
   toWire,
+  updateMarksInvisi,
 } from '../src/routing.ts';
 
 describe('isInvisi', () => {
@@ -262,5 +265,128 @@ describe('cleanHtmlFields', () => {
     const data: Record<string, unknown> = { content: ['<img onerror="x">'] };
     cleanHtmlFields(data, clean);
     expect(data['content']).toBe('');
+  });
+});
+
+describe('updateMarksInvisi', () => {
+  // PF2e's spell variant buttons rebuild a card with Item#toMessage({ create: false }), which applies
+  // the GM's current message mode, then UPDATE the existing world message with the result. In Invisi
+  // mode that wrote the Invisi mark into a message every player already had.
+  const variantUpdate = {
+    _id: null,
+    author: 'gm1',
+    content: '<div>Shadow Blast (Reflex)</div>',
+    whisper: [],
+    blind: true,
+    flags: { pf2e: { origin: { variant: { overlays: ['abc'] } } }, [MODULE_ID]: { invisi: true } },
+  };
+
+  it('spots the mark in a nested update, the shape PF2e sends', () => {
+    expect(updateMarksInvisi(variantUpdate)).toBe(true);
+  });
+
+  it('spots the mark written with dotted keys, the way setFlag and many update calls write it', () => {
+    expect(updateMarksInvisi({ [`flags.${MODULE_ID}.invisi`]: true })).toBe(true);
+    expect(updateMarksInvisi({ [`flags.${MODULE_ID}`]: { invisi: true } })).toBe(true);
+    expect(updateMarksInvisi({ flags: { [`${MODULE_ID}.invisi`]: true } })).toBe(true);
+  });
+
+  it('reads the host flag scope, when a system embeds Invisi-Rolls', () => {
+    expect(updateMarksInvisi({ flags: { coo: { invisi: true } } }, 'coo')).toBe(true);
+    expect(updateMarksInvisi({ flags: { [MODULE_ID]: { invisi: true } } }, 'coo')).toBe(false);
+  });
+
+  it('leaves ordinary updates alone: other modules, our reveal mark, a mark that is not exactly true', () => {
+    expect(updateMarksInvisi({ flags: { 'pf2e-toolbelt': { targetHelper: { targets: ['a'] } } } })).toBe(false);
+    expect(updateMarksInvisi({ flags: { [MODULE_ID]: { revealed: true } } })).toBe(false);
+    expect(updateMarksInvisi({ [`flags.${MODULE_ID}.invisi`]: false })).toBe(false);
+    expect(updateMarksInvisi({ [`flags.${MODULE_ID}`]: null })).toBe(false);
+    expect(updateMarksInvisi({ content: 'x' })).toBe(false);
+    expect(updateMarksInvisi(undefined)).toBe(false);
+  });
+});
+
+describe('applyChanges', () => {
+  const world = {
+    _id: 'world1',
+    author: 'player1',
+    content: '<div>Shadow Blast</div>',
+    whisper: [],
+    blind: false,
+    flags: {
+      pf2e: { origin: { variant: { overlays: [] } }, casting: { id: 'entry' } },
+      'pf2e-toolbelt': { targetHelper: { targets: ['t1', 't2', 't3'] } },
+    },
+  };
+
+  it('is the message the update would have made, keeping everything the update left out', () => {
+    const out = applyChanges(world, {
+      author: 'gm1',
+      content: '<div>Shadow Blast (Reflex)</div>',
+      blind: true,
+      flags: { pf2e: { origin: { variant: { overlays: ['abc'] } } }, [MODULE_ID]: { invisi: true } },
+    });
+    expect(out['author']).toBe('gm1');
+    expect(out['content']).toBe('<div>Shadow Blast (Reflex)</div>');
+    expect(out['blind']).toBe(true);
+    expect(out['flags'].pf2e).toEqual({ origin: { variant: { overlays: ['abc'] } }, casting: { id: 'entry' } });
+    expect(out['flags']['pf2e-toolbelt']).toEqual({ targetHelper: { targets: ['t1', 't2', 't3'] } });
+    expect(out['flags'][MODULE_ID]).toEqual({ invisi: true });
+  });
+
+  it('replaces arrays rather than merging them, as Foundry does', () => {
+    const out = applyChanges(world, { flags: { 'pf2e-toolbelt': { targetHelper: { targets: ['t9'] } } } });
+    expect(out['flags']['pf2e-toolbelt'].targetHelper.targets).toEqual(['t9']);
+  });
+
+  it('expands dotted keys and honours Foundry deletion keys', () => {
+    const out = applyChanges(world, {
+      'flags.pf2e.casting.id': 'other',
+      'flags.pf2e-toolbelt': { '-=targetHelper': null },
+    });
+    expect(out['flags'].pf2e.casting).toEqual({ id: 'other' });
+    expect(out['flags']['pf2e-toolbelt']).toEqual({});
+  });
+
+  it('honours Foundry replacement keys, and merges a path written both ways', () => {
+    const out = applyChanges(world, {
+      flags: { pf2e: { '==origin': { item: 'x' } } },
+      'flags.pf2e-toolbelt': { targetHelper: { save: 'reflex' } },
+      'flags.pf2e-toolbelt.targetHelper': { options: [] },
+    });
+    expect(out['flags'].pf2e).toEqual({ origin: { item: 'x' }, casting: { id: 'entry' } });
+    expect(out['flags']['pf2e-toolbelt'].targetHelper).toEqual({ targets: ['t1', 't2', 't3'], save: 'reflex', options: [] });
+  });
+
+  it('puts an object where the message had none', () => {
+    const out = applyChanges({ content: 'x' }, { flags: { pf2e: { a: 1 } } });
+    expect(out['flags']).toEqual({ pf2e: { a: 1 } });
+  });
+
+  it('drops the id, so the card can never be mistaken for the world message', () => {
+    expect(applyChanges(world, { _id: 'world1' })['_id']).toBeUndefined();
+  });
+
+  it('changes neither the message nor the update it was given', () => {
+    const changes = { flags: { pf2e: { casting: { id: 'x' } } } };
+    applyChanges(world, changes);
+    expect(world.flags.pf2e.casting).toEqual({ id: 'entry' });
+    expect(world._id).toBe('world1');
+    expect(changes).toEqual({ flags: { pf2e: { casting: { id: 'x' } } } });
+  });
+});
+
+describe('badgeFor', () => {
+  it('promises secrecy only for a card held in this browser', () => {
+    expect(badgeFor(true, true)).toBe('hidden');
+  });
+
+  it('WARNS when a world message carries the Invisi mark: every player has that one', () => {
+    expect(badgeFor(true, false)).toBe('leaked');
+  });
+
+  it('shows nothing on an ordinary message', () => {
+    expect(badgeFor(false, false)).toBe('none');
+    expect(badgeFor(false, true)).toBe('none');
   });
 });

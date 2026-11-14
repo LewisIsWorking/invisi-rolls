@@ -169,3 +169,76 @@ export function isPayload(value: unknown): value is InvisiPayload {
 export function standaloneActive(modules: { get(id: string): { active?: boolean } | undefined } | undefined): boolean {
   return modules?.get(MODULE_ID)?.active === true;
 }
+
+/** A plain object: not an array, not null. Message data is JSON, so nothing else needs telling apart. */
+function isPlain(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Turn Foundry's dotted update keys into nested objects, at every level, as foundry.utils.expandObject
+ * does: `{ 'flags.a.b': 1 }` and `{ flags: { 'a.b': 1 } }` both become `{ flags: { a: { b: 1 } } }`.
+ * Pure, so the update guard is tested without Foundry.
+ */
+function expand(data: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [path, raw] of Object.entries(data)) {
+    const value = isPlain(raw) ? expand(raw) : raw;
+    const parts = path.split('.');
+    const last = parts.pop() as string;
+    let target = out;
+    for (const part of parts) {
+      if (!isPlain(target[part])) target[part] = {};
+      target = target[part];
+    }
+    target[last] = isPlain(value) && isPlain(target[last]) ? merge(target[last], value) : value;
+  }
+  return out;
+}
+
+/**
+ * Merge `changes` into `target` IN PLACE the way a Foundry update does: objects merge, arrays and
+ * everything else replace, `-=key` deletes a key and `==key` replaces an object outright.
+ */
+function merge(target: Record<string, any>, changes: Record<string, any>): Record<string, any> {
+  for (const [key, value] of Object.entries(changes)) {
+    if (key.startsWith('-=')) delete target[key.slice(2)];
+    else if (key.startsWith('==')) target[key.slice(2)] = value;
+    else if (isPlain(value)) target[key] = merge(isPlain(target[key]) ? target[key] : {}, value);
+    else target[key] = value;
+  }
+  return target;
+}
+
+/**
+ * Does this ChatMessage update write the Invisi mark? PF2e's spell variant buttons rebuild a card in
+ * the GM's current message mode and UPDATE the existing world message with it, so in Invisi mode the
+ * mark (and the rolls or content it was meant to hide) would land in a message every player has.
+ */
+export function updateMarksInvisi(changes: unknown, flagScope: string = MODULE_ID): boolean {
+  if (!isPlain(changes)) return false;
+  const ours = expand(toWire(changes))['flags']?.[flagScope] as { invisi?: unknown } | null | undefined;
+  return ours?.invisi === true;
+}
+
+/**
+ * The message an update would have made: the world message's source with the update applied, minus
+ * its id. That is the card a GM should get instead, as an Invisi card of its own.
+ */
+export function applyChanges(source: Record<string, any>, changes: Record<string, any>): Record<string, any> {
+  const data = merge(toWire(source), expand(toWire(changes)));
+  delete data['_id'];
+  return data;
+}
+
+/**
+ * What the badge on a message with our mark says. Only a card held in this browser is hidden from
+ * players; a WORLD message carrying the mark reached every player, so it gets a warning, never the
+ * promise that nobody can see it.
+ */
+export type Badge = 'hidden' | 'leaked' | 'none';
+
+export function badgeFor(flagged: boolean, local: boolean): Badge {
+  if (!flagged) return 'none';
+  return local ? 'hidden' : 'leaked';
+}

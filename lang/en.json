@@ -2,6 +2,7 @@
   "INVISI": {
     "Mode": "Invisi-Roll",
     "Badge": "Invisi-Roll: no player can see this",
+    "Leaked": "Marked Invisi, but this is a normal chat message: every player has it. Delete it to hide it from now on.",
     "Sent": "Invisi-Roll sent to the GM. Nobody else saw it.",
     "NoGM": "No GM is connected, so the Invisi-Roll was not made. Nothing was sent.",
     "RenderFailed": "An Invisi-Roll arrived but could not be shown. See the console.",
