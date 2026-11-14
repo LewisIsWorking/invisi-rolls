@@ -175,7 +175,7 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
   });
 
   function sourceOf(data: Record<string, any>): Record<string, any> {
-    const source = toWire(data);
+    const source: any = toWire(data);
     source._id = foundry.utils.randomID();
     source.timestamp = Date.now();
     source.flags ??= {};
