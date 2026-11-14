@@ -11,6 +11,8 @@
     "SecretChecksHint": "PF2e and SF2e: send checks with the secret trait (Recall Knowledge, Seek, Sense Motive and so on) as Invisi-Rolls, so players' browsers never receive them. Off: they stay core blind or GM rolls.",
     "Reveal": "Reveal",
     "RevealHint": "Post this roll to everyone as a normal chat message",
+    "RevealRolling": "The dice are still rolling. Reveal the card once they land.",
+    "RevealFailed": "The card could not be revealed, so it was kept. See the console.",
     "GMOnly": "Only a GM can manage Invisi cards.",
     "Help": "Invisi cards stay in your chat log, in place, after a reload. Type /invisi clear to remove them from this browser."
   }

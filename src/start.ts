@@ -27,6 +27,8 @@ import {
   isSecretCheck,
   makePayload,
   makeRevealPayload,
+  revealCheck,
+  revealPosted,
   revealSource,
   takeMarked,
   toWire,
@@ -214,16 +216,44 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
     // Nice animates from that hook. Calling showForRoll as well rolled every die twice.
   }
 
+  /** Cards with a reveal on its way, so a second click cannot post the card twice. */
+  const revealing = new Set<string>();
+
   /**
    * Post an Invisi card to everyone as an ordinary public message, then drop this GM's local copy and
    * tell the other GMs to drop theirs, so nobody is left holding the card twice.
    */
   async function reveal(message: any): Promise<void> {
-    if (!game.user.isGM || !isLocal(message)) return;
-    await CONFIG.ChatMessage.documentClass.create(revealSource(message.toObject(), flagScope), { messageMode: 'public' });
-    const others = gmRecipients(game.users, game.user.id);
-    if (others.length > 0) game.socket.emit(socket, makeRevealPayload(message.id), { recipients: others });
-    await message.delete();
+    const check = revealCheck({
+      isGM: game.user.isGM,
+      local: isLocal(message),
+      busy: revealing.has(message.id),
+      rolling: message._dice3danimating === true,
+      ageMs: Date.now() - (Number(message.timestamp) || 0),
+    });
+    if (check === 'rolling') ui.notifications.info(t('RevealRolling'));
+    if (check !== 'ok') return;
+
+    revealing.add(message.id);
+    try {
+      const created = await CONFIG.ChatMessage.documentClass.create(revealSource(message.toObject(), flagScope), {
+        messageMode: 'public',
+      });
+      // Nothing posted (a module's preCreate hook cancelled it): keep the card, it is the only copy.
+      if (!revealPosted(created)) {
+        console.warn(`${MODULE_ID} | the reveal was cancelled before it reached the server; the card is kept`, message);
+        ui.notifications.warn(t('RevealFailed'));
+        return;
+      }
+      const others = gmRecipients(game.users, game.user.id);
+      if (others.length > 0) game.socket.emit(socket, makeRevealPayload(message.id), { recipients: others });
+      await message.delete();
+    } catch (err) {
+      console.error(`${MODULE_ID} | could not reveal an Invisi card; the card is kept`, err, message);
+      ui.notifications.error(t('RevealFailed'));
+    } finally {
+      revealing.delete(message.id);
+    }
   }
 
   /** Another GM revealed a card: drop this GM's local copy of it, if there is one. */
@@ -265,7 +295,10 @@ export function startInvisiRolls(host: InvisiHost): InvisiApi {
       button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        void reveal(message);
+        button.disabled = true;
+        void reveal(message).finally(() => {
+          button.disabled = false;
+        });
       });
       badge.append(button);
     }

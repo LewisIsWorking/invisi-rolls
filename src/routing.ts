@@ -242,3 +242,36 @@ export function badgeFor(flagged: boolean, local: boolean): Badge {
   if (!flagged) return 'none';
   return local ? 'hidden' : 'leaked';
 }
+
+/**
+ * How long Reveal waits on a card Dice So Nice is still rolling. Other modules finish a card when its
+ * dice land (PF2e Toolbelt copies save data across then), so revealing earlier deletes the card from
+ * under them. Dice that never finish must not lock a card for good, so the wait has an end.
+ */
+export const REVEAL_ROLLING_GRACE_MS = 30_000;
+
+export type RevealCheck = 'ok' | 'not-allowed' | 'busy' | 'rolling';
+
+/** May this click reveal the card now? `ageMs` is how long ago the card was made. */
+export function revealCheck(state: {
+  isGM: boolean;
+  local: boolean;
+  busy: boolean;
+  rolling: boolean;
+  ageMs: number;
+}): RevealCheck {
+  if (!state.isGM || !state.local) return 'not-allowed';
+  if (state.busy) return 'busy';
+  if (state.rolling && state.ageMs < REVEAL_ROLLING_GRACE_MS) return 'rolling';
+  return 'ok';
+}
+
+/**
+ * Did the reveal post the public message? ChatMessage.create returns nothing when a module's
+ * preCreate hook cancels it, and the GM's card must survive that: it is the only copy there is.
+ */
+export function revealPosted(created: unknown): boolean {
+  if (typeof created !== 'object' || created === null) return false;
+  const id = (created as { id?: unknown }).id;
+  return typeof id === 'string' && id !== '';
+}
