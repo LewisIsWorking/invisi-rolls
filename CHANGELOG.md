@@ -1,5 +1,13 @@
 # invisi-rolls
 
+## 0.4.5
+
+### Patch Changes
+
+- [#28](https://github.com/LewisIsWorking/invisi-rolls/pull/28) [`5dca405`](https://github.com/LewisIsWorking/invisi-rolls/commit/5dca40546ec50ee576d8f8760828b3cb81a7c3eb) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Make Reveal safe. The card is now removed only once the public message has actually been posted: if another module cancels the post, or it fails, the GM keeps the card and sees a warning instead of losing it. A second click while a reveal is on its way is ignored, and Reveal waits (up to 30 seconds) while Dice So Nice is still rolling the card, so modules that finish a card when its dice land are not cut off.
+
+- [#26](https://github.com/LewisIsWorking/invisi-rolls/pull/26) [`6ee0b02`](https://github.com/LewisIsWorking/invisi-rolls/commit/6ee0b0271c22811b472cf1c18dc044f589244259) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Fix a hidden roll reaching every player through PF2e's spell variant buttons. Choosing a variant on a cast card (a save, for example) in Invisi mode rebuilt the card and wrote it into the existing chat message, which every player already had. That update is now stopped, and the rebuilt card goes to the GMs as an Invisi card instead. A normal chat message that carries the Invisi mark now shows the GM a warning, not the "no player can see this" badge.
+
 ## 0.4.4
 
 ### Patch Changes
