@@ -75,6 +75,8 @@ copy, and a button one GM presses changes only that GM's copy.
   through Foundry's message modes, it cannot be intercepted. Reports welcome.
 - What a card button does to the WORLD is normal and visible: applying damage changes the target's
   hit points, which players with permission can see, exactly as with a blind roll.
+- Foundry sockets carry no sender, so a tampered client could fake a card's author.
+  Treat the author line as advisory, the way you would any player-supplied label.
 
 ## Install
 

@@ -23,7 +23,8 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 
 - [x] Point the embed example at the latest library tarball instead of a pinned
   version (delivered with this roadmap).
-- [ ] Note the socket-sender limit in the README Limits section.
+- [x] Note the socket-sender limit in the README Limits section (delivered as a
+  follow-up on this branch).
 - [ ] foundryvtt.com package listing (waiting on Lewis: create the package page
   and add the FOUNDRY_RELEASE_TOKEN secret; until then the release workflow
   warns and skips the publish step).
