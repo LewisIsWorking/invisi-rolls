@@ -90,7 +90,7 @@ A system can ship Invisi-Rolls built in, so its players never install the module
 attaches `invisi-rolls.tgz`, a library package; depend on it by URL:
 
 ```json
-"invisi-rolls": "https://github.com/LewisIsWorking/invisi-rolls/releases/download/v0.2.0/invisi-rolls.tgz"
+"invisi-rolls": "https://github.com/LewisIsWorking/invisi-rolls/releases/latest/download/invisi-rolls.tgz"
 ```
 
 then start it from the system's `init` hook, and set `"socket": true` in its system.json:
