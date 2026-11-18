@@ -28,3 +28,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] foundryvtt.com package listing (waiting on Lewis: create the package page
   and add the FOUNDRY_RELEASE_TOKEN secret; until then the release workflow
   warns and skips the publish step).
+- [ ] Tokenless dry-run for the foundryvtt publish step (local branch
+  opencode/modules/foundry-dryrun ready: DRY_RUN=true validates the release
+  body with no token; tick when its PR merges).
