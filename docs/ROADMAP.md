@@ -33,3 +33,5 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   body with no token; tick when its PR merges).
 - [ ] Daily releases-page fetch times out instead of hanging the workflow
   (local branch opencode/modules/bump-timeout ready; tick when its PR merges).
+- [ ] Publish step warns and skips with no release token (local branch
+  opencode/modules/publish-skip ready; tick when its PR merges).
