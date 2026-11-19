@@ -2,7 +2,8 @@
  * Registers the release on foundryvtt.com, so the package page lists the new version without anyone
  * adding it by hand. Uses Foundry's Package Release API, reading the stamped module.json for the
  * version and compatibility. Reads FOUNDRY_RELEASE_TOKEN and REPO; DRY_RUN=true validates only,
- * and needs no token: it checks the release body locally and prints it without sending anything.
+ * and needs no token: it checks the release body and the manifest's install URLs locally
+ * and prints the body without sending anything.
  */
 import { readFileSync } from 'node:fs';
 
@@ -41,6 +42,13 @@ for (const key of ['minimum', 'verified', 'maximum']) {
 for (const key of ['manifest', 'notes'] as const) {
   if (!body.release[key].startsWith(`https://github.com/${repo}/releases/`)) {
     problems.push(`release ${key} does not point at this repo's releases: ${body.release[key]}`);
+  }
+}
+// The install-critical URLs baked into the manifest itself: a repo rename or transfer that
+// updates the workflow but not these would break every Foundry client's update check.
+for (const key of ['manifest', 'download'] as const) {
+  if (typeof manifest[key] !== 'string' || !manifest[key].startsWith(`https://github.com/${repo}/releases/`)) {
+    problems.push(`module.json ${key} does not point at this repo's releases: ${manifest[key]}`);
   }
 }
 if (problems.length > 0) {
