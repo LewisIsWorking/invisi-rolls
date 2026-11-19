@@ -7,8 +7,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text'],
-      // main.ts is the Foundry boundary and is covered by the live check, not by unit tests.
-      include: ['src/routing.ts', 'src/history.ts'],
+      // main.ts and start.ts are the Foundry lifecycle boundary and are covered by the live
+      // check, not by unit tests. routing, history and local-message run without a client.
+      include: ['src/routing.ts', 'src/history.ts', 'src/local-message.ts'],
       thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
     },
   },
