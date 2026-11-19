@@ -37,3 +37,5 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   opencode/modules/publish-skip ready; tick when its PR merges).
 - [ ] Workflow jobs time out instead of hanging for hours (local branch
   opencode/modules/workflow-timeouts ready; tick when its PR merges).
+- [ ] Unit-cover the GM-local message lifecycle (local branch
+  opencode/modules/localmsg-tests ready; tick when its PR merges).
