@@ -35,3 +35,5 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   (local branch opencode/modules/bump-timeout ready; tick when its PR merges).
 - [ ] Publish step warns and skips with no release token (local branch
   opencode/modules/publish-skip ready; tick when its PR merges).
+- [ ] Workflow jobs time out instead of hanging for hours (local branch
+  opencode/modules/workflow-timeouts ready; tick when its PR merges).
