@@ -7,9 +7,15 @@ import { readFileSync } from 'node:fs';
 
 const token = process.env['FOUNDRY_RELEASE_TOKEN'];
 const repo = process.env['REPO'];
-if (!token || !repo) {
-  console.error('FOUNDRY_RELEASE_TOKEN and REPO must both be set.');
+if (!repo) {
+  console.error('REPO must be set.');
   process.exit(1);
+}
+if (!token) {
+  // No package page yet (see docs/ROADMAP.md): the release itself already shipped in the
+  // step above, so warn and skip instead of failing it.
+  console.warn('FOUNDRY_RELEASE_TOKEN is not set; skipping the foundryvtt.com publish step.');
+  process.exit(0);
 }
 
 const manifest = JSON.parse(readFileSync('module.json', 'utf8'));

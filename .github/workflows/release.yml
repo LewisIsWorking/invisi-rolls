@@ -63,7 +63,8 @@ jobs:
           mv "invisi-rolls-${VERSION}.tgz" invisi-rolls.tgz
           gh release upload "v${VERSION}" module.zip module.json invisi-rolls.tgz --repo "$REPO" --clobber
 
-      # Lists the new version on foundryvtt.com. Fails loudly if the FOUNDRY_RELEASE_TOKEN secret is missing.
+      # Lists the new version on foundryvtt.com. Warns and skips if the FOUNDRY_RELEASE_TOKEN
+      # secret is missing (no package page yet); the release itself already shipped above.
       - name: Publish the release to foundryvtt.com
         if: (steps.changesets.outputs.published == 'true' || github.event_name == 'workflow_dispatch')
         env:
