@@ -1,0 +1,7 @@
+{
+  "foundry": "14.370",
+  "pf2e": "8.7.1",
+  "sf2e": "1.7.1",
+  "checked": "2026-11-18",
+  "note": "What the last green live check ran against (C99 and C98). Update this in the same PR as the live-check log after a green run."
+}

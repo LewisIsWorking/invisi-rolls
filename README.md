@@ -112,6 +112,7 @@ embedded copy does nothing, so a roll is never handled twice.
 npm install
 npm run verify       # prose guard, typecheck, unit tests at 100% coverage, module + library builds
 npm run check:live   # the real proof, against a running Foundry: see docs/LIVE-CHECK.md
+npm run check:upstream # has Foundry, PF2e or SF2e moved since the last live check (docs/upstream.json)?
 ```
 
 MIT licensed. Issues and pull requests welcome.

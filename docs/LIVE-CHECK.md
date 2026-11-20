@@ -4,6 +4,13 @@
 marker reaches a player's browser. It needs a throwaway Foundry v14 instance; never point it at a
 real game (it creates users and enables the module).
 
+## After a green run
+
+Set `docs/upstream.json` to the Foundry, PF2e and SF2e versions the run used, and its date, in the
+same PR as the log. The daily `upstream-watch.yml` workflow compares that baseline with
+foundryvtt.com and the systems' release tags; while it lags behind a check that has already been
+done, the workflow keeps opening an issue asking for one.
+
 ## A throwaway instance
 
 1. Make a data directory with `Config/` and `Data/{systems,modules,worlds}/`.

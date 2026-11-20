@@ -31,6 +31,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint:prose": "node scripts/check-em-dashes.ts",
+    "check:upstream": "node scripts/check-upstream.ts",
     "check:live": "node scripts/live-check.ts",
     "check:live:pf2e": "node scripts/live-check-pf2e.ts",
     "check:live:dsn": "node scripts/live-check-dsn.ts",
