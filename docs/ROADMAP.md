@@ -59,3 +59,7 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Guard the verified-foundry bump's build selection, so a regex or sort
   change cannot ship a stale or wrong-major badge (local branch
   opencode/modules/verified-bump-tests ready; tick when its PR merges).
+- [ ] Guard the foundryvtt publish step's release body and install URLs, so a
+  wrong tag, a missing compatibility field or a URL pointing at another repo
+  cannot ship unnoticed (local branch opencode/modules/publish-tests ready;
+  tick when its PR merges).
