@@ -75,6 +75,8 @@ copy, and a button one GM presses changes only that GM's copy.
   through Foundry's message modes, it cannot be intercepted. Reports welcome.
 - What a card button does to the WORLD is normal and visible: applying damage changes the target's
   hit points, which players with permission can see, exactly as with a blind roll.
+- Foundry sockets carry no sender, so a tampered client could fake a card's author.
+  Treat the author line as advisory, the way you would any player-supplied label.
 
 ## Install
 
@@ -90,7 +92,7 @@ A system can ship Invisi-Rolls built in, so its players never install the module
 attaches `invisi-rolls.tgz`, a library package; depend on it by URL:
 
 ```json
-"invisi-rolls": "https://github.com/LewisIsWorking/invisi-rolls/releases/download/v0.2.0/invisi-rolls.tgz"
+"invisi-rolls": "https://github.com/LewisIsWorking/invisi-rolls/releases/latest/download/invisi-rolls.tgz"
 ```
 
 then start it from the system's `init` hook, and set `"socket": true` in its system.json:
