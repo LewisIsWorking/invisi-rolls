@@ -48,3 +48,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Guard the packaging step: stamped before zipped, zip carries dist and
   lang, a re-run overwrites (local branch
   opencode/modules/release-workflow-tests ready; tick when its PR merges).
+- [ ] Prove the em-dash guard still catches escapes, so a narrowed escape or
+  skip list cannot pass CI (local branch opencode/modules/emdash-guard-tests
+  ready; tick when its PR merges).
