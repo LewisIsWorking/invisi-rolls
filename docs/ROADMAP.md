@@ -45,3 +45,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Test the release stamp that rewrites version, manifest and download, so
   a stray tag or a missing VERSION cannot ship (local branch
   opencode/modules/stamp-tests ready; tick when its PR merges).
+- [ ] Guard the packaging step: stamped before zipped, zip carries dist and
+  lang, a re-run overwrites (local branch
+  opencode/modules/release-workflow-tests ready; tick when its PR merges).
