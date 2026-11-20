@@ -52,3 +52,7 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Prove the em-dash guard still catches escapes, so a narrowed escape or
   skip list cannot pass CI (local branch opencode/modules/emdash-guard-tests
   ready; tick when its PR merges).
+- [ ] Notice a new Foundry, PF2e or SF2e release without a person looking: a
+  daily workflow compares them with docs/upstream.json and opens one issue
+  (local branch opencode/modules/upstream-watch ready; tick when its PR
+  merges).
