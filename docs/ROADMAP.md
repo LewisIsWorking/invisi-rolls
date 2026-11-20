@@ -35,7 +35,10 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Daily releases-page fetch times out instead of hanging the workflow
   (local branch opencode/modules/bump-timeout ready; tick when its PR merges).
 - [ ] Publish step warns and skips with no release token (local branch
-  opencode/modules/publish-skip ready; tick when its PR merges).
+  opencode/modules/publish-skip ready; tick when its PR merges). For
+  creature-template-applier, which has no token yet; Invisi-Rolls has its token
+  and live package page now, so its release step keeps failing loudly when the
+  token is missing.
 - [ ] Release step wiring: the release workflow runs the publish script it
   tests for the release it just cut, with the token and repo the script reads,
   and only on the same condition the packaging step uploads on (local branch
