@@ -42,3 +42,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
 - [ ] Guard module.json against a wrong repository, a manifest or download
   URL off releases/latest, or a dropped socket flag (local branch
   opencode/modules/manifest-guard ready; tick when its PR merges).
+- [ ] Test the release stamp that rewrites version, manifest and download, so
+  a stray tag or a missing VERSION cannot ship (local branch
+  opencode/modules/stamp-tests ready; tick when its PR merges).
