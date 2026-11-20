@@ -8,8 +8,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text'],
       // main.ts is the Foundry boundary and is covered by the live check, not by unit tests.
-      include: ['src/routing.ts', 'src/history.ts'],
+      include: ['src/routing.ts', 'src/history.ts', 'src/publish.ts'],
       thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
     },
   },
 });
+
