@@ -56,3 +56,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   daily workflow compares them with docs/upstream.json and opens one issue
   (local branch opencode/modules/upstream-watch ready; tick when its PR
   merges).
+- [ ] Guard the verified-foundry bump's build selection, so a regex or sort
+  change cannot ship a stale or wrong-major badge (local branch
+  opencode/modules/verified-bump-tests ready; tick when its PR merges).
