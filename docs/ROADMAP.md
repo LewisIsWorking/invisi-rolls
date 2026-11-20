@@ -25,10 +25,10 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   version (delivered with this roadmap).
 - [x] Note the socket-sender limit in the README Limits section (delivered as a
   follow-up on this branch).
-- [ ] foundryvtt.com package listing (waiting on Lewis: create the package page
-  and add the FOUNDRY_RELEASE_TOKEN secret; the copy and the checks are in
-  docs/PACKAGE-LISTING.md, and until then the release workflow warns and skips
-  the publish step).
+- [x] foundryvtt.com package listing (delivered: the page lists v0.4.5 verified
+  for Foundry 14.370, the FOUNDRY_RELEASE_TOKEN secret is set, and the
+  2026-11-14 release run published to foundryvtt.com successfully; the checks
+  live in docs/PACKAGE-LISTING.md).
 - [ ] Tokenless dry-run for the foundryvtt publish step (local branch
   opencode/modules/foundry-dryrun ready: DRY_RUN=true validates the release
   body with no token; tick when its PR merges).

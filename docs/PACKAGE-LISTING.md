@@ -4,6 +4,13 @@ The module is installable today from its manifest URL; the package page only mak
 findable in Foundry's setup screen. The roadmap tracks this as one item that waits on
 Lewis, because it needs a credential. Everything else is below, ready to paste.
 
+## State
+
+Checked 2026-11-20: the page is live at <https://foundryvtt.com/packages/invisi-rolls/>
+and lists v0.4.5 verified for Foundry 14.370, and this repository has the
+FOUNDRY_RELEASE_TOKEN secret, so releases publish themselves. What remains is the
+check below after the next release.
+
 ## What the site needs
 
 Create the package at <https://foundryvtt.com/admin/packages/> (log in with the account
