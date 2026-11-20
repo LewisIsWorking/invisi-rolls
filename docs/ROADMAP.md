@@ -39,3 +39,6 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   opencode/modules/workflow-timeouts ready; tick when its PR merges).
 - [ ] Unit-cover the GM-local message lifecycle (local branch
   opencode/modules/localmsg-tests ready; tick when its PR merges).
+- [ ] Guard module.json against a wrong repository, a manifest or download
+  URL off releases/latest, or a dropped socket flag (local branch
+  opencode/modules/manifest-guard ready; tick when its PR merges).
