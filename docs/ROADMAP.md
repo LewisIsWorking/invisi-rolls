@@ -39,7 +39,7 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   creature-template-applier, which has no token yet; Invisi-Rolls has its token
   and live package page now, so its release step keeps failing loudly when the
   token is missing.
-- [ ] Release step wiring: the release workflow runs the publish script it
+- [x] Release step wiring: the release workflow runs the publish script it
   tests for the release it just cut, with the token and repo the script reads,
   and only on the same condition the packaging step uploads on (local branch
   opencode/modules/publish-workflow-tests ready; tick when its PR merges).
