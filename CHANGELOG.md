@@ -1,5 +1,13 @@
 # invisi-rolls
 
+## 0.4.6
+
+### Patch Changes
+
+- [#29](https://github.com/LewisIsWorking/invisi-rolls/pull/29) [`6102622`](https://github.com/LewisIsWorking/invisi-rolls/commit/6102622b34964b726aa2521351c71bd665cba9c2) Thanks [@LewisIsWorking](https://github.com/LewisIsWorking)! - Docs: add a roadmap with a Tracker, and point the embed example at the latest library tarball.
+
+- Verified for Foundry 14.371.
+
 ## 0.4.5
 
 ### Patch Changes
