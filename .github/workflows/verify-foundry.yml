@@ -18,6 +18,7 @@ jobs:
   bump:
     name: Bump verified and release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
       actions: write
