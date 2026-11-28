@@ -43,7 +43,7 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   tests for the release it just cut, with the token and repo the script reads,
   and only on the same condition the packaging step uploads on (local branch
   opencode/modules/publish-workflow-tests ready; tick when its PR merges).
-- [ ] README install snippet and module.json release URLs agree, so a stale
+- [x] README install snippet and module.json release URLs agree, so a stale
   pinned release cannot ship in a copy-paste install (local branch
   opencode/modules/readme-install-guard ready; tick when its PR merges).
 - [x] Workflow jobs time out instead of hanging for hours (local branch
