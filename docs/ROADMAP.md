@@ -29,7 +29,7 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   for Foundry 14.370, the FOUNDRY_RELEASE_TOKEN secret is set, and the
   2026-11-14 release run published to foundryvtt.com successfully; the checks
   live in docs/PACKAGE-LISTING.md).
-- [ ] Tokenless dry-run for the foundryvtt publish step (local branch
+- [x] Tokenless dry-run for the foundryvtt publish step (local branch
   opencode/modules/foundry-dryrun ready: DRY_RUN=true validates the release
   body with no token; tick when its PR merges).
 - [x] Daily releases-page fetch times out instead of hanging the workflow
