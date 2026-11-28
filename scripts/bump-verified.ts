@@ -1,8 +1,10 @@
 /**
  * Keeps module.json's compatibility.verified on the newest STABLE Foundry build of its major version,
- * so the setup screen never shows the "Compatibility Risk" badge. Reads foundryvtt.com/releases,
- * writes the new build into module.json plus a patch changeset, and prints `verified=<build>` to
- * GITHUB_OUTPUT when it changed anything. Fails loudly if the page no longer parses.
+ * so the setup screen never shows the "Compatibility Risk" badge. Reads foundryvtt.com/releases
+ * (FOUNDRY_RELEASES_URL overrides it, for testing against a stub), writes the new build into
+ * module.json plus a patch changeset, and prints `verified=<build>` to GITHUB_OUTPUT when it
+ * changed anything. Fails loudly if the page no longer parses. The fetch has a 30 s timeout so
+ * a hung page fails the run instead of burning Actions minutes.
  */
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 
@@ -11,7 +13,8 @@ const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 const major = String(manifest.compatibility.maximum ?? manifest.compatibility.minimum).split('.')[0];
 const current = String(manifest.compatibility.verified);
 
-const html = await (await fetch('https://foundryvtt.com/releases/')).text();
+const releasesUrl = process.env['FOUNDRY_RELEASES_URL'] ?? 'https://foundryvtt.com/releases/';
+const html = await (await fetch(releasesUrl, { signal: AbortSignal.timeout(30_000) })).text();
 // Each release is a "Release 14.369 Update Notes" link followed by its channel tag.
 const stable: string[] = [];
 let pending: string | null = null;

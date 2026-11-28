@@ -29,10 +29,10 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   for Foundry 14.370, the FOUNDRY_RELEASE_TOKEN secret is set, and the
   2026-11-14 release run published to foundryvtt.com successfully; the checks
   live in docs/PACKAGE-LISTING.md).
-- [ ] Tokenless dry-run for the foundryvtt publish step (local branch
+- [x] Tokenless dry-run for the foundryvtt publish step (local branch
   opencode/modules/foundry-dryrun ready: DRY_RUN=true validates the release
   body with no token; tick when its PR merges).
-- [ ] Daily releases-page fetch times out instead of hanging the workflow
+- [x] Daily releases-page fetch times out instead of hanging the workflow
   (local branch opencode/modules/bump-timeout ready; tick when its PR merges).
 - [ ] Publish step warns and skips with no release token (local branch
   opencode/modules/publish-skip ready; tick when its PR merges). For
@@ -43,10 +43,10 @@ Owner: Foundry Modules (Invisi-Rolls and Templates)
   tests for the release it just cut, with the token and repo the script reads,
   and only on the same condition the packaging step uploads on (local branch
   opencode/modules/publish-workflow-tests ready; tick when its PR merges).
-- [ ] README install snippet and module.json release URLs agree, so a stale
+- [x] README install snippet and module.json release URLs agree, so a stale
   pinned release cannot ship in a copy-paste install (local branch
   opencode/modules/readme-install-guard ready; tick when its PR merges).
-- [ ] Workflow jobs time out instead of hanging for hours (local branch
+- [x] Workflow jobs time out instead of hanging for hours (local branch
   opencode/modules/workflow-timeouts ready; tick when its PR merges).
 - [ ] Unit-cover the GM-local message lifecycle (local branch
   opencode/modules/localmsg-tests ready; tick when its PR merges).
